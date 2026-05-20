@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#123f36">
+    <title>SRKR Business Suite</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css?v=1">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-mark">
+        <img src="assets/image2.png" alt="SRKR logo">
+      </div>
+      <div>
+        <p class="eyebrow">Offline Business Setup</p>
+        <h1>SRI RADHE KRISHNA ROADLINES</h1>
+      </div>
+      <button id="installBtn" class="ghost" type="button" hidden>Install</button>
+    </header>
+
+    <nav class="tabs" aria-label="Main modules">
+      <button class="tab active" data-tab="dashboard" type="button">Dashboard</button>
+      <button class="tab" data-tab="branding" type="button">Branding</button>
+      <button class="tab" data-tab="card" type="button">Business Card</button>
+      <button class="tab" data-tab="invoice" type="button">Invoice</button>
+      <button class="tab" data-tab="mis" type="button">MIS</button>
+      <button class="tab" data-tab="bills" type="button">Bills</button>
+      <button class="tab" data-tab="balance" type="button">Balance Sheet</button>
+      <button class="tab" data-tab="backup" type="button">Backup</button>
+    </nav>
+
+    <main>
+      <section id="dashboard" class="panel active">
+        <div class="summary-grid">
+          <article><span>Total Income</span><strong id="dashIncome">0.00</strong></article>
+          <article><span>Total Expense</span><strong id="dashExpense">0.00</strong></article>
+          <article><span>Balance</span><strong id="dashBalance">0.00</strong></article>
+          <article><span>Invoices</span><strong id="dashInvoices">0</strong></article>
+        </div>
+        <div class="work-grid">
+          <section class="surface">
+            <h2>Recent Activity</h2>
+            <div id="recentList" class="list empty">No entries yet.</div>
+          </section>
+          <section class="surface">
+            <h2>Company File</h2>
+            <dl class="company-facts">
+              <div><dt>Owner</dt><dd id="factOwner">-</dd></div>
+              <div><dt>Mobile</dt><dd id="factMobile">-</dd></div>
+              <div><dt>GSTIN</dt><dd id="factGstin">-</dd></div>
+              <div><dt>Email</dt><dd id="factEmail">-</dd></div>
+            </dl>
+          </section>
+        </div>
+      </section>
+
+      <section id="branding" class="panel">
+        <form id="profileForm" class="form-grid surface">
+          <h2>Company Branding</h2>
+          <label>Company Name<input name="companyName" required></label>
+          <label>Tagline<input name="tagline"></label>
+          <label>Owner / Contact Person<input name="owner"></label>
+          <label>Mobile Numbers<input name="mobile"></label>
+          <label>Email<input name="email" type="email"></label>
+          <label>GSTIN<input name="gstin"></label>
+          <label>Address<textarea name="address" rows="3"></textarea></label>
+          <label>Bank Details<textarea name="bank" rows="3"></textarea></label>
+          <div class="actions">
+            <button type="submit">Save Branding</button>
+            <button class="ghost" type="button" data-print="letterhead">Print Letterhead</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="card" class="panel">
+        <div class="work-grid">
+          <section class="surface card-preview printable" id="businessCardPrint">
+            <div class="card-face">
+              <img src="assets/image2.png" alt="">
+              <div>
+                <h2 data-bind="companyName">SRI RADHE KRISHNA ROADLINES</h2>
+                <p data-bind="tagline">Transport Contractor</p>
+              </div>
+              <strong data-bind="owner">Owner</strong>
+              <span data-bind="mobile">Mobile</span>
+              <span data-bind="email">Email</span>
+              <small data-bind="address">Address</small>
+            </div>
+          </section>
+          <section class="surface">
+            <h2>Business Card</h2>
+            <p class="muted">Branding page me jo company details save honge, yahan card me wahi auto dikhte rahenge.</p>
+            <button type="button" data-print="business-card">Print Business Card</button>
+          </section>
+        </div>
+      </section>
+
+      <section id="invoice" class="panel">
+        <form id="invoiceForm" class="form-grid surface">
+          <h2>Invoice Entry</h2>
+          <label>Invoice No.<input name="invoiceNo" type="number" readonly></label>
+          <label>Invoice Date<input name="invoiceDate" type="date" required></label>
+          <label>Description<input name="description" list="descList" required></label>
+          <datalist id="descList">
+            <option value="Vehicle hire charges"></option>
+            <option value="Transportation charges"></option>
+            <option value="Loading and unloading charges"></option>
+          </datalist>
+          <label>Month From<input name="monthFrom" type="date" required></label>
+          <label>Month To<input name="monthTo" type="date" required></label>
+          <label>Amount<input name="amount" type="number" min="0" step="0.01" required></label>
+          <div class="amount-words" id="invoiceWords">Rupees Zero Only.</div>
+          <div class="actions">
+            <button type="submit">Save Invoice</button>
+            <button class="ghost" type="button" id="newInvoiceBtn">New</button>
+            <button class="ghost" type="button" data-print="invoice">Print Invoice</button>
+          </div>
+        </form>
+        <section class="surface">
+          <div class="section-head">
+            <h2>Invoice History</h2>
+            <label class="search">Search<input id="invoiceSearch" inputmode="numeric" placeholder="Invoice no."></label>
+          </div>
+          <div id="invoiceList" class="table-wrap"></div>
+        </section>
+      </section>
+
+      <section id="mis" class="panel">
+        <form id="misForm" class="form-grid surface">
+          <h2>MIS Entry</h2>
+          <label>Date<input name="date" type="date" required></label>
+          <label>Vehicle No.<input name="vehicle" required></label>
+          <label>Party<input name="party" required></label>
+          <label>Route<input name="route"></label>
+          <label>LR / Ref No.<input name="reference"></label>
+          <label>Amount<input name="amount" type="number" min="0" step="0.01" required></label>
+          <div class="actions"><button type="submit">Save MIS</button><button class="ghost" type="button" data-print="mis">Print MIS</button></div>
+        </form>
+        <section class="surface"><h2>MIS Register</h2><div id="misList" class="table-wrap"></div></section>
+      </section>
+
+      <section id="bills" class="panel">
+        <form id="billForm" class="form-grid surface">
+          <h2>Bill / Expense Entry</h2>
+          <label>Date<input name="date" type="date" required></label>
+          <label>Bill Type<select name="type"><option>Diesel</option><option>Maintenance</option><option>Driver Salary</option><option>Office Expense</option><option>Other</option></select></label>
+          <label>Vendor / Person<input name="vendor" required></label>
+          <label>Bill No.<input name="billNo"></label>
+          <label>Amount<input name="amount" type="number" min="0" step="0.01" required></label>
+          <label>Notes<textarea name="notes" rows="2"></textarea></label>
+          <div class="actions"><button type="submit">Save Bill</button><button class="ghost" type="button" data-print="bills">Print Bills</button></div>
+        </form>
+        <section class="surface"><h2>Bill Register</h2><div id="billList" class="table-wrap"></div></section>
+      </section>
+
+      <section id="balance" class="panel">
+        <div class="surface">
+          <div class="section-head">
+            <h2>Balance Sheet</h2>
+            <button type="button" data-print="balance">Print Balance Sheet</button>
+          </div>
+          <div id="balanceSheet" class="balance-sheet"></div>
+        </div>
+      </section>
+
+      <section id="backup" class="panel">
+        <div class="work-grid">
+          <section class="surface">
+            <h2>Backup JSON</h2>
+            <p class="muted">Sara local data ek JSON file me export hoga. History auto delete nahi hogi.</p>
+            <button id="exportBtn" type="button">Export Backup</button>
+          </section>
+          <section class="surface">
+            <h2>Import JSON</h2>
+            <input id="importFile" type="file" accept="application/json">
+            <button id="importBtn" type="button">Import Backup</button>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <section id="printArea" class="print-area" aria-hidden="true"></section>
+    <div id="toast" class="toast" role="status"></div>
+    <script src="app.js?v=1" defer></script>
+  </body>
+</html>

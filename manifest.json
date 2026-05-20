@@ -1,0 +1,15 @@
+{
+  "name": "SRKR Business Suite",
+  "short_name": "SRKR Suite",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f8f7",
+  "theme_color": "#123f36",
+  "icons": [
+    {
+      "src": "assets/image2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

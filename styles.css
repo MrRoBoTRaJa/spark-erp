@@ -1,0 +1,235 @@
+:root {
+  --ink: #14221f;
+  --muted: #60706c;
+  --line: #dce5e2;
+  --paper: #ffffff;
+  --soft: #eef5f2;
+  --brand: #123f36;
+  --accent: #c79a2c;
+  --danger: #b3261e;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  background: #f5f8f7;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px 12px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.brand-mark img { max-width: 42px; max-height: 42px; }
+.eyebrow { margin: 0 0 2px; color: var(--accent); font-size: 11px; text-transform: uppercase; font-weight: 700; }
+h1 { margin: 0; font-size: clamp(18px, 4vw, 28px); letter-spacing: 0; }
+h2 { margin: 0 0 14px; font-size: 18px; }
+.muted { color: var(--muted); line-height: 1.4; }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 12px;
+  background: #f5f8f7;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab, button {
+  border: 0;
+  background: var(--brand);
+  color: white;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.tab {
+  flex: 0 0 auto;
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.tab.active { background: var(--brand); color: white; border-color: var(--brand); }
+.ghost { background: white; color: var(--brand); border: 1px solid var(--brand); }
+
+main {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 14px;
+}
+
+.panel { display: none; }
+.panel.active { display: grid; gap: 14px; }
+
+.surface {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.summary-grid, .work-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.work-grid { grid-template-columns: 1fr 1fr; }
+.summary-grid article {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.summary-grid span { display: block; color: var(--muted); font-size: 12px; }
+.summary-grid strong { display: block; margin-top: 8px; font-size: 24px; }
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-grid h2, .form-grid .actions, .form-grid textarea, .amount-words { grid-column: 1 / -1; }
+label { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
+input, select, textarea {
+  width: 100%;
+  border: 1px solid #b8c8c3;
+  border-radius: 6px;
+  min-height: 42px;
+  padding: 9px 10px;
+  font: inherit;
+  background: white;
+}
+
+textarea { resize: vertical; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.amount-words {
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+  font-weight: 700;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.search { width: min(240px, 100%); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: white; }
+th, td { border: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; }
+th { background: var(--soft); }
+.row-actions { display: flex; gap: 8px; }
+.row-actions button { min-height: 34px; padding: 0 10px; }
+.danger { background: var(--danger); }
+.empty { color: var(--muted); padding: 10px 0; }
+
+.company-facts { display: grid; gap: 10px; margin: 0; }
+.company-facts div { display: grid; grid-template-columns: 100px 1fr; gap: 10px; }
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 700; }
+
+.card-preview { display: grid; place-items: center; min-height: 260px; }
+.card-face {
+  width: min(440px, 100%);
+  aspect-ratio: 1.75;
+  border: 1px solid #111;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 10px;
+  align-content: center;
+  background: #fff;
+}
+.card-face img { width: 72px; align-self: start; }
+.card-face h2 { margin: 0; font-size: 18px; }
+.card-face p { margin: 4px 0 0; color: var(--accent); font-weight: 700; }
+.card-face strong, .card-face span, .card-face small { grid-column: 2; }
+
+.balance-sheet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.balance-box { border: 1px solid var(--line); padding: 12px; border-radius: 8px; }
+.balance-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.balance-row:last-child { border-bottom: 0; font-weight: 700; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ink);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: .2s ease;
+  z-index: 10;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.print-area { display: none; }
+
+@media (max-width: 760px) {
+  .topbar { grid-template-columns: 42px 1fr; }
+  .topbar .ghost { grid-column: 1 / -1; }
+  .summary-grid, .work-grid, .form-grid, .balance-sheet { grid-template-columns: 1fr; }
+  main { padding: 10px; }
+  .section-head { align-items: stretch; flex-direction: column; }
+}
+
+@media print {
+  body > :not(.print-area) { display: none !important; }
+  .print-area {
+    display: block;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .print-sheet {
+    width: 190mm;
+    margin: 0 auto;
+    padding: 8mm;
+  }
+  .print-head {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .print-head img { width: 64px; }
+  .print-head h2 { margin: 0; font-size: 24px; }
+  .print-head p { margin: 2px 0; }
+  .print-table th, .print-table td { border: 1px solid #000; color: #000; }
+}
