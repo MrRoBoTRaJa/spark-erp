@@ -1,9 +1,9 @@
-const CACHE_NAME = "srkr-business-suite-v1";
+const CACHE_NAME = "srkr-business-suite-v5";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=1",
-  "./app.js?v=1",
+  "./styles.css?v=5",
+  "./app.js?v=5",
   "./manifest.json",
   "./assets/image1.png",
   "./assets/image2.png",

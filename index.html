@@ -6,38 +6,57 @@
     <meta name="theme-color" content="#123f36">
     <title>SRKR Business Suite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=1">
+    <link rel="stylesheet" href="styles.css?v=5">
   </head>
   <body>
     <header class="topbar">
-      <div class="brand-mark">
-        <img src="assets/image2.png" alt="SRKR logo">
+      <div class="brand-lockup">
+        <div class="brand-mark">
+          <img src="assets/image2.png" alt="SRKR logo">
+        </div>
+        <div>
+          <p class="eyebrow">Business Control Room</p>
+          <h1>SRI RADHE KRISHNA ROADLINES</h1>
+        </div>
       </div>
-      <div>
-        <p class="eyebrow">Offline Business Setup</p>
-        <h1>SRI RADHE KRISHNA ROADLINES</h1>
+      <div class="top-actions">
+        <span class="status-chip">Offline Ready</span>
+        <span class="status-chip accent">Local Data</span>
+        <button id="installBtn" class="ghost" type="button" hidden>Install</button>
       </div>
-      <button id="installBtn" class="ghost" type="button" hidden>Install</button>
     </header>
 
     <nav class="tabs" aria-label="Main modules">
-      <button class="tab active" data-tab="dashboard" type="button">Dashboard</button>
-      <button class="tab" data-tab="branding" type="button">Branding</button>
-      <button class="tab" data-tab="card" type="button">Business Card</button>
-      <button class="tab" data-tab="invoice" type="button">Invoice</button>
-      <button class="tab" data-tab="mis" type="button">MIS</button>
-      <button class="tab" data-tab="bills" type="button">Bills</button>
-      <button class="tab" data-tab="balance" type="button">Balance Sheet</button>
-      <button class="tab" data-tab="backup" type="button">Backup</button>
+      <button class="tab active" data-tab="dashboard" type="button"><span>01</span>Dashboard</button>
+      <button class="tab" data-tab="branding" type="button"><span>02</span>Branding</button>
+      <button class="tab" data-tab="card" type="button"><span>03</span>Business Card</button>
+      <button class="tab" data-tab="invoice" type="button"><span>04</span>Invoice</button>
+      <button class="tab" data-tab="mis" type="button"><span>05</span>MIS</button>
+      <button class="tab" data-tab="bills" type="button"><span>06</span>Bills</button>
+      <button class="tab" data-tab="balance" type="button"><span>07</span>Balance Sheet</button>
+      <button class="tab" data-tab="backup" type="button"><span>08</span>Backup</button>
     </nav>
 
     <main>
       <section id="dashboard" class="panel active">
+        <section class="command-panel">
+          <div>
+            <p class="eyebrow">SRKR Office Suite</p>
+            <h2>Daily billing, MIS, expense aur balance ek jagah.</h2>
+          </div>
+          <div class="command-card">
+            <img src="assets/image2.png" alt="">
+            <div>
+              <strong>Company File</strong>
+              <span data-bind="mobile">9939269234, 6207178839</span>
+            </div>
+          </div>
+        </section>
         <div class="summary-grid">
-          <article><span>Total Income</span><strong id="dashIncome">0.00</strong></article>
-          <article><span>Total Expense</span><strong id="dashExpense">0.00</strong></article>
-          <article><span>Balance</span><strong id="dashBalance">0.00</strong></article>
-          <article><span>Invoices</span><strong id="dashInvoices">0</strong></article>
+          <article><i>IN</i><span>Total Income</span><strong id="dashIncome">0.00</strong></article>
+          <article><i>EX</i><span>Total Expense</span><strong id="dashExpense">0.00</strong></article>
+          <article><i>BL</i><span>Balance</span><strong id="dashBalance">0.00</strong></article>
+          <article><i>IV</i><span>Invoices</span><strong id="dashInvoices">0</strong></article>
         </div>
         <div class="work-grid">
           <section class="surface">
@@ -183,6 +202,6 @@
 
     <section id="printArea" class="print-area" aria-hidden="true"></section>
     <div id="toast" class="toast" role="status"></div>
-    <script src="app.js?v=1" defer></script>
+    <script src="app.js?v=5" defer></script>
   </body>
 </html>
