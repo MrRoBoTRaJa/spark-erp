@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#111111">
     <title>Spark ERP Phase 1</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=18">
+    <link rel="stylesheet" href="styles.css?v=19">
   </head>
   <body class="is-locked">
     <section id="loginScreen" class="login-screen">
@@ -124,6 +124,7 @@
           <article><span>Users</span><strong id="statUsers">0</strong></article>
           <article><span>Ledgers</span><strong id="statLedgers">0</strong></article>
           <article><span>Cost Categories</span><strong id="statCostCategories">0</strong></article>
+          <article><span>Cost Centres</span><strong id="statCostCentres">0</strong></article>
           <article><span>Vouchers</span><strong id="statVouchers">0</strong></article>
           <article><span>Invoices</span><strong id="statInvoices">0</strong></article>
           <article><span>Stock Items</span><strong id="statStock">0</strong></article>
@@ -215,6 +216,21 @@
             <div id="costCategoryList" class="table-wrap"></div>
           </section>
         </div>
+        <div class="two-col">
+          <form id="costCentreForm" class="surface form-grid">
+            <h2>Cost Centre</h2>
+            <input name="id" type="hidden">
+            <label>Cost Category<select name="costCategoryId"></select></label>
+            <label>Centre Name<input name="name" required></label>
+            <label>Status<select name="status"><option>Active</option><option>Inactive</option></select></label>
+            <label>Notes<textarea name="notes" rows="2"></textarea></label>
+            <div class="actions"><button type="submit">Save Cost Centre</button><button class="ghost" id="newCostCentreBtn" type="button">New</button></div>
+          </form>
+          <section class="surface">
+            <h2>Cost Centre List</h2>
+            <div id="costCentreList" class="table-wrap"></div>
+          </section>
+        </div>
       </section>
 
       <section id="vouchers" class="panel">
@@ -223,6 +239,7 @@
           <label>Voucher Type<select name="type"><option>Payment</option><option>Receipt</option><option>Contra</option><option>Journal</option></select></label>
           <label>Date<input name="date" type="date" required></label>
           <label>Cost Category<select name="costCategoryId"></select></label>
+          <label>Cost Centre<select name="costCentreId"></select></label>
           <label>Debit Ledger<select name="debitLedger" required></select></label>
           <label>Credit Ledger<select name="creditLedger" required></select></label>
           <label>Amount<input name="amount" type="number" step="0.01" required></label>
@@ -241,6 +258,7 @@
             <label>Date<input name="date" type="date" required></label>
             <label>Party Ledger<select name="partyLedger" required></select></label>
             <label>Cost Category<select name="costCategoryId"></select></label>
+            <label>Cost Centre<select name="costCentreId"></select></label>
           </div>
           <div class="table-wrap">
             <table class="entry-table">
@@ -264,6 +282,7 @@
           <label>Item Name<input name="item" required></label>
           <label>Type<select name="type"><option>Stock In</option><option>Stock Out</option></select></label>
           <label>Cost Category<select name="costCategoryId"></select></label>
+          <label>Cost Centre<select name="costCentreId"></select></label>
           <label>Qty<input name="qty" type="number" step="0.01" required></label>
           <label>Rate<input name="rate" type="number" step="0.01"></label>
           <label>Notes<textarea name="notes" rows="2"></textarea></label>
@@ -279,6 +298,7 @@
           <h3>Trial Balance</h3><div id="trialBalance" class="table-wrap"></div>
           <h3>Profit & Loss</h3><div id="profitLoss" class="report-box"></div>
           <h3>Ledger Report</h3><div id="ledgerReport" class="table-wrap"></div>
+          <h3>Cost Centre Summary</h3><div id="costCentreReport" class="table-wrap"></div>
         </div>
       </section>
 
@@ -312,6 +332,6 @@
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="app.js?v=18" defer></script>
+    <script src="app.js?v=19" defer></script>
   </body>
 </html>

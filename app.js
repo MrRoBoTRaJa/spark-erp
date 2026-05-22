@@ -1,14 +1,14 @@
 "use strict";
 
 const DB_NAME = "spark_erp_phase1";
-const DB_VERSION = 2;
-const STORES = ["users", "companies", "ledgers", "costCategories", "vouchers", "invoices", "stock", "backups"];
+const DB_VERSION = 3;
+const STORES = ["users", "companies", "ledgers", "costCategories", "costCentres", "vouchers", "invoices", "stock", "backups"];
 const DEFAULT_USER = { id: "admin", userId: "admin", password: "spark@123", role: "Super Admin", companyId: "" };
 
 let db;
 let currentUser = null;
 let activeCompanyId = localStorage.getItem("spark_erp_active_company") || "";
-let state = { users: [], companies: [], ledgers: [], costCategories: [], vouchers: [], invoices: [], stock: [], backups: [] };
+let state = { users: [], companies: [], ledgers: [], costCategories: [], costCentres: [], vouchers: [], invoices: [], stock: [], backups: [] };
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -114,6 +114,9 @@ function bindUi() {
   $("#newLedgerBtn").addEventListener("click", () => $("#ledgerForm").reset());
   $("#costCategoryForm").addEventListener("submit", saveCostCategory);
   $("#newCostCategoryBtn").addEventListener("click", () => $("#costCategoryForm").reset());
+  $("#costCentreForm").addEventListener("submit", saveCostCentre);
+  $("#newCostCentreBtn").addEventListener("click", () => $("#costCentreForm").reset());
+  $$("[name='costCategoryId']").forEach((select) => select.addEventListener("change", renderCostCentreOptions));
   $("#voucherForm").addEventListener("submit", saveVoucher);
   $("#invoiceForm").addEventListener("submit", saveInvoice);
   $("#addInvoiceItemBtn").addEventListener("click", () => addInvoiceItem());
@@ -263,6 +266,15 @@ async function saveCostCategory(event) {
   event.currentTarget.reset();
 }
 
+async function saveCostCentre(event) {
+  event.preventDefault();
+  if (!requireCompany()) return;
+  const data = readForm(event.currentTarget);
+  await put("costCentres", { ...data, id: data.id || uid("ctr"), companyId: activeCompanyId, createdAt: now() });
+  await afterWrite("Cost Centre saved");
+  event.currentTarget.reset();
+}
+
 async function saveVoucher(event) {
   event.preventDefault();
   if (!requireCompany()) return;
@@ -312,6 +324,8 @@ function renderAll() {
   renderLedgerOptions();
   renderCostCategoryList();
   renderCostCategoryOptions();
+  renderCostCentreList();
+  renderCostCentreOptions();
   renderVoucherList();
   renderInvoiceItems();
   renderInvoiceList();
@@ -334,6 +348,7 @@ function renderHeader() {
   $("#statUsers").textContent = visibleUsers().length;
   $("#statLedgers").textContent = companyRows(state.ledgers).length;
   $("#statCostCategories").textContent = companyRows(state.costCategories).length;
+  $("#statCostCentres").textContent = companyRows(state.costCentres).length;
   $("#statVouchers").textContent = companyRows(state.vouchers).length;
   $("#statInvoices").textContent = companyRows(state.invoices).length;
   $("#statStock").textContent = stockSummary().length;
@@ -433,10 +448,29 @@ function renderCostCategoryOptions() {
   });
 }
 
+function renderCostCentreList() {
+  const rows = companyRows(state.costCentres);
+  $("#costCentreList").innerHTML = table(["Centre", "Category", "Status", "Notes"], rows.map((row) => [
+    row.name, costCategoryName(row.costCategoryId), row.status || "Active", row.notes || ""
+  ]));
+}
+
+function renderCostCentreOptions() {
+  const rows = companyRows(state.costCentres).filter((row) => (row.status || "Active") === "Active");
+  $$("[name='costCentreId']").forEach((select) => {
+    const categoryId = select.closest("form")?.elements.costCategoryId?.value || "";
+    const filtered = categoryId ? rows.filter((row) => row.costCategoryId === categoryId) : rows;
+    const options = filtered.map((row) => `<option value="${escapeAttr(row.id)}">${escapeHtml(row.name)}</option>`).join("");
+    const previous = select.value;
+    select.innerHTML = `<option value="">No Cost Centre</option>${options}`;
+    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+  });
+}
+
 function renderVoucherList() {
   const rows = companyRows(state.vouchers).sort((a, b) => b.date.localeCompare(a.date));
-  $("#voucherList").innerHTML = table(["Date", "Type", "Cost Category", "Dr", "Cr", "Amount", "Narration"], rows.map((row) => [
-    dateShort(row.date), row.type, costCategoryName(row.costCategoryId), ledgerName(row.debitLedger), ledgerName(row.creditLedger), money(row.amount), row.narration || ""
+  $("#voucherList").innerHTML = table(["Date", "Type", "Cost Category", "Cost Centre", "Dr", "Cr", "Amount", "Narration"], rows.map((row) => [
+    dateShort(row.date), row.type, costCategoryName(row.costCategoryId), costCentreName(row.costCentreId), ledgerName(row.debitLedger), ledgerName(row.creditLedger), money(row.amount), row.narration || ""
   ]));
 }
 
@@ -495,15 +529,15 @@ function invoiceTotals(items) {
 
 function renderInvoiceList() {
   const rows = companyRows(state.invoices).sort((a, b) => b.date.localeCompare(a.date));
-  $("#invoiceList").innerHTML = table(["Date", "Type", "Invoice", "Party", "Cost Category", "Taxable", "GST", "Total"], rows.map((row) => [
-    dateShort(row.date), row.type, row.invoiceNo, ledgerName(row.partyLedger), costCategoryName(row.costCategoryId), money(row.taxable), money(row.gstAmount), money(row.total)
+  $("#invoiceList").innerHTML = table(["Date", "Type", "Invoice", "Party", "Cost Category", "Cost Centre", "Taxable", "GST", "Total"], rows.map((row) => [
+    dateShort(row.date), row.type, row.invoiceNo, ledgerName(row.partyLedger), costCategoryName(row.costCategoryId), costCentreName(row.costCentreId), money(row.taxable), money(row.gstAmount), money(row.total)
   ]));
 }
 
 function renderStock() {
   $("#stockSummary").innerHTML = table(["Item", "Qty", "Value"], stockSummary().map((row) => [row.item, money(row.qty), money(row.value)]));
   const rows = companyRows(state.stock).sort((a, b) => b.date.localeCompare(a.date));
-  $("#stockList").innerHTML = table(["Date", "Item", "Type", "Cost Category", "Qty", "Rate", "Notes"], rows.map((row) => [dateShort(row.date), row.item, row.type, costCategoryName(row.costCategoryId), money(row.qty), money(row.rate), row.notes || ""]));
+  $("#stockList").innerHTML = table(["Date", "Item", "Type", "Cost Category", "Cost Centre", "Qty", "Rate", "Notes"], rows.map((row) => [dateShort(row.date), row.item, row.type, costCategoryName(row.costCategoryId), costCentreName(row.costCentreId), money(row.qty), money(row.rate), row.notes || ""]));
 }
 
 function stockSummary() {
@@ -526,6 +560,34 @@ function renderReports() {
   const expenses = balances.filter((row) => row.group === "Expense").reduce((sum, row) => sum + Math.max(row.balance, 0), 0);
   $("#profitLoss").innerHTML = `<div><span>Sales</span><strong>${money(sales)}</strong></div><div><span>Purchase</span><strong>${money(purchase)}</strong></div><div><span>Expenses</span><strong>${money(expenses)}</strong></div><div><span>Net Profit</span><strong>${money(sales - purchase - expenses)}</strong></div>`;
   $("#ledgerReport").innerHTML = table(["Ledger", "Group", "Balance"], balances.map((row) => [row.name, row.group, `${money(Math.abs(row.balance))} ${row.balance >= 0 ? "Dr" : "Cr"}`]));
+  renderCostCentreReport();
+}
+
+function renderCostCentreReport() {
+  const rows = costCentreSummary();
+  $("#costCentreReport").innerHTML = table(["Cost Centre", "Sales", "Purchase", "Voucher Amount", "Stock Value"], rows.map((row) => [
+    row.name, money(row.sales), money(row.purchase), money(row.voucher), money(row.stock)
+  ]));
+}
+
+function costCentreSummary() {
+  const map = new Map(companyRows(state.costCentres).map((row) => [row.id, { id: row.id, name: row.name, sales: 0, purchase: 0, voucher: 0, stock: 0 }]));
+  const ensure = (id) => {
+    const key = id || "none";
+    if (!map.has(key)) map.set(key, { id: key, name: id ? costCentreName(id) || "Unknown" : "No Cost Centre", sales: 0, purchase: 0, voucher: 0, stock: 0 });
+    return map.get(key);
+  };
+  companyRows(state.invoices).forEach((row) => {
+    const item = ensure(row.costCentreId);
+    if (row.type === "Sales") item.sales += num(row.taxable);
+    if (row.type === "Purchase") item.purchase += num(row.taxable);
+  });
+  companyRows(state.vouchers).forEach((row) => ensure(row.costCentreId).voucher += num(row.amount));
+  companyRows(state.stock).forEach((row) => {
+    const sign = row.type === "Stock Out" ? -1 : 1;
+    ensure(row.costCentreId).stock += sign * num(row.qty) * num(row.rate);
+  });
+  return [...map.values()].filter((row) => row.id !== "none" || row.sales || row.purchase || row.voucher || row.stock);
 }
 
 function ledgerBalances() {
@@ -691,6 +753,10 @@ function ledgerName(id) {
 
 function costCategoryName(id) {
   return state.costCategories.find((row) => row.id === id)?.name || "";
+}
+
+function costCentreName(id) {
+  return state.costCentres.find((row) => row.id === id)?.name || "";
 }
 
 function companyName(id) {

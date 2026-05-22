@@ -13,6 +13,7 @@ Modules:
 - Multiple company creation and selection
 - Customer and supplier ledgers
 - Cost Category master with voucher, invoice and stock tagging
+- Cost Centre tracking under cost categories with summary report
 - Payment, Receipt, Contra and Journal vouchers
 - Sales and Purchase GST invoice entry
 - Inventory stock in/out
