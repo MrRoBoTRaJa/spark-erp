@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#123f36">
     <title>SRKR Business Suite</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
   </head>
   <body>
     <header class="topbar">
@@ -15,7 +15,7 @@
           <img src="assets/image2.png" alt="SRKR logo">
         </div>
         <div>
-          <p class="eyebrow">Business Control Room</p>
+          <p class="eyebrow">Gateway of Business</p>
           <h1>SRI RADHE KRISHNA ROADLINES</h1>
         </div>
       </div>
@@ -27,28 +27,52 @@
     </header>
 
     <nav class="tabs" aria-label="Main modules">
-      <button class="tab active" data-tab="dashboard" type="button"><span>01</span>Dashboard</button>
-      <button class="tab" data-tab="branding" type="button"><span>02</span>Branding</button>
-      <button class="tab" data-tab="card" type="button"><span>03</span>Business Card</button>
-      <button class="tab" data-tab="invoice" type="button"><span>04</span>Invoice</button>
-      <button class="tab" data-tab="mis" type="button"><span>05</span>MIS</button>
-      <button class="tab" data-tab="bills" type="button"><span>06</span>Bills</button>
-      <button class="tab" data-tab="balance" type="button"><span>07</span>Balance Sheet</button>
-      <button class="tab" data-tab="backup" type="button"><span>08</span>Backup</button>
+      <button class="tab active" data-tab="dashboard" type="button"><span>G</span>Gateway</button>
+      <button class="tab" data-tab="branding" type="button"><span>M</span>Company Master</button>
+      <button class="tab" data-tab="card" type="button"><span>C</span>Business Card</button>
+      <button class="tab" data-tab="invoice" type="button"><span>V</span>Sales Voucher</button>
+      <button class="tab" data-tab="mis" type="button"><span>M</span>MIS Register</button>
+      <button class="tab" data-tab="bills" type="button"><span>P</span>Payment Voucher</button>
+      <button class="tab" data-tab="balance" type="button"><span>R</span>Balance Sheet</button>
+      <button class="tab" data-tab="backup" type="button"><span>U</span>Utilities</button>
     </nav>
 
     <main>
       <section id="dashboard" class="panel active">
-        <section class="command-panel">
-          <div>
-            <p class="eyebrow">SRKR Office Suite</p>
-            <h2>Daily billing, MIS, expense aur balance ek jagah.</h2>
+        <section class="gateway-screen">
+          <div class="gateway-title">
+            <span>Current Company</span>
+            <strong data-bind="companyName">SRI RADHE KRISHNA ROADLINES</strong>
           </div>
-          <div class="command-card">
-            <img src="assets/image2.png" alt="">
-            <div>
-              <strong>Company File</strong>
-              <span data-bind="mobile">9939269234, 6207178839</span>
+          <div class="gateway-grid">
+            <div class="gateway-menu">
+              <h2>Gateway of Business</h2>
+              <div class="gateway-group">
+                <h3>Masters</h3>
+                <button type="button" data-jump="branding">Company Master</button>
+                <button type="button" data-jump="card">Business Card</button>
+              </div>
+              <div class="gateway-group">
+                <h3>Transactions</h3>
+                <button type="button" data-jump="invoice">Sales Voucher / Invoice</button>
+                <button type="button" data-jump="mis">MIS Register</button>
+                <button type="button" data-jump="bills">Payment Voucher / Bills</button>
+              </div>
+              <div class="gateway-group">
+                <h3>Reports</h3>
+                <button type="button" data-jump="balance">Balance Sheet</button>
+                <button type="button" data-jump="backup">Backup / Restore</button>
+              </div>
+            </div>
+            <div class="gateway-status">
+              <h2>Company Info</h2>
+              <dl>
+                <div><dt>Period</dt><dd>01-Apr-2026 to 31-Mar-2027</dd></div>
+                <div><dt>Today</dt><dd id="todayStatus">-</dd></div>
+                <div><dt>Mobile</dt><dd data-bind="mobile">9939269234, 6207178839</dd></div>
+                <div><dt>Email</dt><dd data-bind="email">srkrroadlines9792@gmail.com</dd></div>
+                <div><dt>Mode</dt><dd>Offline / Local IndexedDB</dd></div>
+              </dl>
             </div>
           </div>
         </section>
@@ -124,7 +148,7 @@
 
       <section id="invoice" class="panel">
         <form id="invoiceForm" class="form-grid surface">
-          <h2>Invoice Entry</h2>
+          <h2>Sales Voucher / Invoice Entry</h2>
           <label>Invoice No.<input name="invoiceNo" type="number" readonly></label>
           <label>Invoice Date<input name="invoiceDate" type="date" required></label>
           <datalist id="descList">
@@ -134,7 +158,7 @@
           </datalist>
           <div class="ledger-panel">
             <div class="section-head compact">
-              <h3>Invoice Ledger Rows</h3>
+              <h3>Voucher Particulars</h3>
               <div class="actions">
                 <button class="ghost" type="button" id="addInvoiceRowBtn">Add Row</button>
                 <button class="ghost" type="button" id="clearInvoiceRowsBtn">Clear Rows</button>
@@ -242,6 +266,6 @@
       </div>
     </dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="app.js?v=7" defer></script>
+    <script src="app.js?v=8" defer></script>
   </body>
 </html>

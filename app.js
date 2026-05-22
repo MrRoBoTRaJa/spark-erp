@@ -89,6 +89,7 @@ async function loadAll() {
 
 function bindUi() {
   $$(".tab").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.tab)));
+  $$("[data-jump]").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.jump)));
   $("#profileForm").addEventListener("submit", saveProfile);
   $("#invoiceForm").addEventListener("submit", saveInvoice);
   $("#misForm").addEventListener("submit", saveMis);
@@ -234,6 +235,7 @@ function renderBindings() {
   $$("[data-bind]").forEach((node) => {
     node.textContent = state.profile[node.dataset.bind] || "";
   });
+  $("#todayStatus").textContent = dateShort(new Date().toISOString().slice(0, 10));
   $("#factOwner").textContent = state.profile.owner || "-";
   $("#factMobile").textContent = state.profile.mobile || "-";
   $("#factGstin").textContent = state.profile.gstin || "-";

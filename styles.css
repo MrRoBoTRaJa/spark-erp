@@ -4,9 +4,9 @@
   --line: #dce5e1;
   --paper: #ffffff;
   --soft: #edf4f1;
-  --brand: #123f36;
-  --brand-2: #1f5b4f;
-  --accent: #c79a2c;
+  --brand: #0b3f86;
+  --brand-2: #145da8;
+  --accent: #ffd86a;
   --accent-2: #7a3f23;
   --danger: #b3261e;
   --shadow: 0 18px 42px rgba(21, 42, 36, .12);
@@ -21,10 +21,7 @@ body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   color: var(--ink);
-  background:
-    linear-gradient(90deg, rgba(18,63,54,.05) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(18,63,54,.05) 1px, transparent 1px),
-    #f6f8f7;
+  background: #0b3f86;
   background-size: 28px 28px;
   overflow-x: hidden;
 }
@@ -34,7 +31,7 @@ body::before {
   position: fixed;
   inset: 0 0 auto;
   height: 230px;
-  background: #123f36;
+  background: #0b3f86;
   clip-path: polygon(0 0, 100% 0, 100% 74%, 0 100%);
   z-index: -1;
 }
@@ -49,7 +46,7 @@ body::before {
   align-items: center;
   padding: max(16px, env(safe-area-inset-top)) 18px 14px;
   color: white;
-  background: rgba(18, 63, 54, .94);
+  background: #0b3f86;
   border-bottom: 1px solid rgba(255,255,255,.12);
   backdrop-filter: blur(14px);
 }
@@ -115,7 +112,7 @@ h2 { margin: 0 0 14px; font-size: 19px; line-height: 1.2; letter-spacing: 0; }
   overflow-x: auto;
   max-width: 100vw;
   padding: 12px 18px;
-  background: rgba(246,248,247,.92);
+  background: #e6f0ff;
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
 }
@@ -136,7 +133,7 @@ h2 { margin: 0 0 14px; font-size: 19px; line-height: 1.2; letter-spacing: 0; }
   color: white;
   min-height: 44px;
   padding: 0 15px;
-  border-radius: 7px;
+  border-radius: 2px;
   font-weight: 800;
   letter-spacing: 0;
   cursor: pointer;
@@ -148,9 +145,9 @@ h2 { margin: 0 0 14px; font-size: 19px; line-height: 1.2; letter-spacing: 0; }
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  background: white;
-  color: var(--ink);
-  border: 1px solid var(--line);
+  background: #f4fbff;
+  color: #002b5f;
+  border: 1px solid #8fb7e6;
   box-shadow: none;
 }
 
@@ -159,21 +156,21 @@ h2 { margin: 0 0 14px; font-size: 19px; line-height: 1.2; letter-spacing: 0; }
   height: 28px;
   display: inline-grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: 2px;
   color: var(--brand);
   background: var(--soft);
   font-size: 11px;
 }
 
 .tab.active {
-  background: var(--brand);
-  color: white;
+  background: #ffd86a;
+  color: #062d61;
   border-color: var(--brand);
 }
 
 .tab.active span {
-  color: #1b1707;
-  background: var(--accent);
+  color: white;
+  background: #0b3f86;
 }
 
 .ghost {
@@ -187,7 +184,7 @@ main {
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 18px;
+  padding: 14px;
 }
 
 .panel { display: none; }
@@ -210,6 +207,116 @@ main {
   border: 1px solid rgba(255,255,255,.18);
   border-radius: 8px;
   box-shadow: var(--shadow);
+}
+
+.gateway-screen {
+  overflow: hidden;
+  border: 2px solid #062d61;
+  background: #0b3f86;
+  color: #061f42;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .24);
+}
+
+.gateway-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  color: white;
+  background: #062d61;
+  border-bottom: 1px solid rgba(255,255,255,.25);
+  font-weight: 800;
+}
+
+.gateway-title span {
+  color: #ffd86a;
+}
+
+.gateway-grid {
+  display: grid;
+  grid-template-columns: minmax(270px, 420px) 1fr;
+  gap: 18px;
+  padding: 18px;
+  min-height: 420px;
+}
+
+.gateway-menu,
+.gateway-status {
+  background: #f7fbff;
+  border: 2px solid #74a3dc;
+  box-shadow: inset 0 0 0 1px white;
+}
+
+.gateway-menu h2,
+.gateway-status h2 {
+  margin: 0;
+  padding: 9px 12px;
+  color: #062d61;
+  background: #ffd86a;
+  border-bottom: 1px solid #c19a29;
+  text-align: center;
+  font-size: 18px;
+}
+
+.gateway-group {
+  padding: 10px 14px 12px;
+  border-bottom: 1px solid #c7ddf5;
+}
+
+.gateway-group:last-child {
+  border-bottom: 0;
+}
+
+.gateway-group h3 {
+  margin: 0 0 8px;
+  color: #0b3f86;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.gateway-group button {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 34px;
+  margin: 4px 0;
+  padding: 0 10px;
+  color: #062d61;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.gateway-group button:hover {
+  background: #0b3f86;
+  color: white;
+  border-color: #062d61;
+}
+
+.gateway-status dl {
+  margin: 0;
+  padding: 12px;
+}
+
+.gateway-status div {
+  display: grid;
+  grid-template-columns: 115px 1fr;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #d6e7fa;
+}
+
+.gateway-status div:last-child {
+  border-bottom: 0;
+}
+
+.gateway-status dt {
+  color: #0b3f86;
+  font-weight: 900;
+}
+
+.gateway-status dd {
+  color: #061f42;
 }
 
 .command-panel::before {
@@ -273,9 +380,9 @@ main {
 .command-panel h2 { overflow-wrap: anywhere; }
 
 .surface {
-  background: rgba(255,255,255,.96);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: #f7fbff;
+  border: 2px solid #74a3dc;
+  border-radius: 2px;
   padding: 16px;
   box-shadow: var(--small-shadow);
 }
@@ -311,7 +418,7 @@ main {
   min-height: 124px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 16px;
   box-shadow: var(--small-shadow);
 }
@@ -354,7 +461,7 @@ label { display: grid; gap: 7px; font-weight: 800; font-size: 13px; color: #2635
 input, select, textarea {
   width: 100%;
   border: 1px solid #bfcec9;
-  border-radius: 7px;
+  border-radius: 2px;
   min-height: 45px;
   padding: 10px 11px;
   font: inherit;
@@ -386,9 +493,9 @@ textarea { resize: vertical; }
   display: grid;
   gap: 10px;
   border: 1px solid #b7c8c3;
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 12px;
-  background: #f9fcfb;
+  background: #e6f0ff;
 }
 
 .section-head.compact {
@@ -409,7 +516,7 @@ textarea { resize: vertical; }
 }
 
 .ledger-table th {
-  background: #143f36;
+  background: #0b3f86;
   color: white;
 }
 
@@ -616,6 +723,7 @@ dd { margin: 0; font-weight: 800; overflow-wrap: anywhere; }
 @media (max-width: 920px) {
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .work-grid, .command-panel { grid-template-columns: minmax(0, 1fr); }
+  .gateway-grid { grid-template-columns: minmax(0, 1fr); }
   .tabs { top: 83px; }
 }
 
@@ -713,6 +821,7 @@ dd { margin: 0; font-weight: 800; overflow-wrap: anywhere; }
     flex-direction: column;
   }
   table { min-width: 640px; }
+  .gateway-status div { grid-template-columns: 1fr; }
 }
 
 @media print {
