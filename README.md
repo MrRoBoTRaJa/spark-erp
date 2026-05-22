@@ -21,5 +21,6 @@ Modules:
 - GST summary
 - Auto backup plus JSON export/import
 - Persistent browser storage request to reduce accidental data cleanup
+- Online update checker with small APK update popup
 
 This app uses only HTML, CSS, JavaScript and IndexedDB. APK will be built later when requested.
