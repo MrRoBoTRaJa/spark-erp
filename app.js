@@ -108,6 +108,7 @@ function bindUi() {
   $("#newCompanyBtn").addEventListener("click", () => $("#companyForm").reset());
   $("#userForm").addEventListener("submit", saveUser);
   $("#newUserBtn").addEventListener("click", resetUserForm);
+  $("#userList").addEventListener("click", handleUserListClick);
   $("#userForm").elements.role.addEventListener("change", updateUserCompanyField);
   $("#ledgerForm").addEventListener("submit", saveLedger);
   $("#newLedgerBtn").addEventListener("click", () => $("#ledgerForm").reset());
@@ -360,7 +361,7 @@ function renderUserList() {
     roleBadge(row.role),
     row.companyId ? companyName(row.companyId) : "All Companies",
     "••••••",
-    `<button type="button" onclick="editUser('${escapeAttr(row.id)}')">Edit</button>`
+    `<button type="button" data-edit-user="${escapeAttr(row.id)}">Edit</button>`
   ]));
 }
 
@@ -370,13 +371,24 @@ function visibleUsers() {
   return state.users.filter((row) => row.companyId === currentUser.companyId || row.id === currentUser.id);
 }
 
-window.editUser = (id) => {
+function handleUserListClick(event) {
+  const button = event.target.closest("[data-edit-user]");
+  if (!button) return;
+  editUser(button.dataset.editUser);
+}
+
+function editUser(id) {
   const user = state.users.find((row) => row.id === id);
-  if (!user) return;
-  fillForm($("#userForm"), user);
+  if (!user) return toast("User record nahi mila");
+  const form = $("#userForm");
+  fillForm(form, user);
   updateUserCompanyField();
   showTab("users");
-};
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  toast(`${user.userId} edit ke liye load ho gaya`);
+}
+
+window.editUser = editUser;
 
 function renderLedgerList() {
   const rows = companyRows(state.ledgers);
