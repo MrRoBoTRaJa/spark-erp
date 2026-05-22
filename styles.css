@@ -679,6 +679,17 @@ dd { margin: 0; font-weight: 800; overflow-wrap: anywhere; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .print-area { display: none; }
 
+.app-footer {
+  margin-left: 232px;
+  padding: 8px 14px;
+  color: white;
+  background: #062d61;
+  border-top: 1px solid rgba(255,255,255,.24);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
 .preview-dialog {
   width: min(1040px, calc(100vw - 20px));
   height: min(92vh, 860px);
@@ -819,6 +830,9 @@ dd { margin: 0; font-weight: 800; overflow-wrap: anywhere; }
   .preview-bar {
     align-items: stretch;
     flex-direction: column;
+  }
+  .app-footer {
+    margin-left: 0;
   }
   table { min-width: 640px; }
   .gateway-status div { grid-template-columns: 1fr; }

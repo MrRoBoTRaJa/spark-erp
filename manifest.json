@@ -1,10 +1,10 @@
 {
-  "name": "SRKR Business Suite",
-  "short_name": "SRKR Suite",
+  "name": "Spark Accounts Pro",
+  "short_name": "Spark Accounts",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f8f7",
-  "theme_color": "#123f36",
+  "theme_color": "#0b3f86",
   "icons": [
     {
       "src": "assets/image2.png",

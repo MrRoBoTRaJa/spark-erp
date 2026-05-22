@@ -1,6 +1,6 @@
 "use strict";
 
-const DB_NAME = "srkr_company_suite";
+const DB_NAME = "spark_accounts_pro";
 const DB_VERSION = 1;
 const STORES = ["profile", "invoices", "mis", "bills"];
 let db;
@@ -11,11 +11,11 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
 const defaults = {
-  companyName: "SRI RADHE KRISHNA ROADLINES",
-  tagline: "Transport Contractor",
-  owner: "SRI RADHE KRISHNA ROADLINES",
-  mobile: "9939269234, 6207178839",
-  email: "srkrroadlines9792@gmail.com",
+  companyName: "Your Company Name",
+  tagline: "Business Accounting",
+  owner: "",
+  mobile: "",
+  email: "",
   gstin: "",
   address: "Lowk, Near Vir Kuwar Singh Park, Ranchi 834001",
   bank: "",
@@ -416,8 +416,8 @@ function buildDocument(type) {
   const head = printHead();
   const docs = {
     invoice: () => ({ title: "Invoice PDF", filename: `invoice_${$("#invoiceForm").elements.invoiceNo.value || "draft"}_${safeDate($("#invoiceForm").elements.invoiceDate.value)}.pdf`, html: printInvoice(), lines: invoicePdfLines() }),
-    "business-card": () => ({ title: "Business Card PDF", filename: "srkr_business_card.pdf", html: `<div class="print-sheet card-sheet">${$("#businessCardPrint").innerHTML}</div>`, lines: businessCardPdfLines() }),
-    letterhead: () => ({ title: "Letterhead PDF", filename: "srkr_letterhead.pdf", html: printLetterhead(), lines: letterheadPdfLines() }),
+    "business-card": () => ({ title: "Business Card PDF", filename: "spark_accounts_business_card.pdf", html: `<div class="print-sheet card-sheet">${$("#businessCardPrint").innerHTML}</div>`, lines: businessCardPdfLines() }),
+    letterhead: () => ({ title: "Letterhead PDF", filename: "spark_accounts_letterhead.pdf", html: printLetterhead(), lines: letterheadPdfLines() }),
     mis: () => ({ title: "MIS Register PDF", filename: `mis_register_${safeDate(new Date().toISOString().slice(0, 10))}.pdf`, html: `<div class="print-sheet">${head}<h2>MIS Register</h2>${$("#misList").innerHTML}</div>`, lines: registerPdfLines("MIS Register", ["Date", "Vehicle", "Party", "Route", "Ref", "Amount"], state.mis.map((row) => [dateShort(row.date), row.vehicle, row.party, row.route || "", row.reference || "", money(row.amount)])) }),
     bills: () => ({ title: "Bills Register PDF", filename: `bills_register_${safeDate(new Date().toISOString().slice(0, 10))}.pdf`, html: `<div class="print-sheet">${head}<h2>Bill Register</h2>${$("#billList").innerHTML}</div>`, lines: registerPdfLines("Bill Register", ["Date", "Type", "Vendor", "Bill No.", "Amount"], state.bills.map((row) => [dateShort(row.date), row.type, row.vendor, row.billNo || "", money(row.amount)])) }),
     balance: () => ({ title: "Balance Sheet PDF", filename: `balance_sheet_${safeDate(new Date().toISOString().slice(0, 10))}.pdf`, html: `<div class="print-sheet">${head}<h2>Balance Sheet</h2>${$("#balanceSheet").innerHTML}</div>`, lines: balancePdfLines() })
@@ -629,7 +629,7 @@ function escapeHtml(value) {
 
 async function exportBackup() {
   const payload = { exportedAt: new Date().toISOString(), version: 1, data: state };
-  download(`srkr-business-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json");
+  download(`spark-accounts-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json");
 }
 
 async function importBackup() {

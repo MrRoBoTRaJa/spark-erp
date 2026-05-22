@@ -1,6 +1,6 @@
-# SRKR Business Suite
+# Spark Accounts Pro
 
-Offline-first company setup for Sri Radhe Krishna Roadlines.
+Offline-first accounting software by Spark Digital Marketing.
 
 Modules:
 - Company branding

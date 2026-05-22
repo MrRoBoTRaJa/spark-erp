@@ -1,9 +1,9 @@
-const CACHE_NAME = "srkr-business-suite-v8";
+const CACHE_NAME = "spark-accounts-v9";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=8",
-  "./app.js?v=8",
+  "./styles.css?v=9",
+  "./app.js?v=9",
   "./manifest.json",
   "./assets/image1.png",
   "./assets/image2.png",
