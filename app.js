@@ -1,39 +1,28 @@
 "use strict";
 
-const DB_NAME = "spark_accounts_pro";
+const DB_NAME = "spark_erp_phase1";
 const DB_VERSION = 1;
-const STORES = ["profile", "invoices", "mis", "bills"];
+const STORES = ["users", "companies", "ledgers", "vouchers", "invoices", "stock", "backups"];
+const DEFAULT_USER = { id: "admin", userId: "admin", password: "spark@123", role: "Admin" };
+
 let db;
-let deferredInstall;
-let state = { profile: {}, invoices: [], mis: [], bills: [] };
+let currentUser = null;
+let activeCompanyId = localStorage.getItem("spark_erp_active_company") || "";
+let state = { users: [], companies: [], ledgers: [], vouchers: [], invoices: [], stock: [], backups: [] };
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-
-const defaults = {
-  companyName: "Your Company Name",
-  tagline: "Business Accounting",
-  owner: "",
-  mobile: "",
-  email: "",
-  gstin: "",
-  address: "Lowk, Near Vir Kuwar Singh Park, Ranchi 834001",
-  bank: "",
-  defaultInvoiceRows: 1,
-  descriptionMaster: "Vehicle hire charges\nTransportation charges\nLoading and unloading charges",
-  loginUser: "admin",
-  loginPass: "spark@123"
-};
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   db = await openDb();
+  await ensureDefaultUser();
   await loadAll();
   bindUi();
-  setTodayDefaults();
+  setToday();
   renderAll();
-  applyAuthState();
+  applyAuth();
   registerServiceWorker();
 }
 
@@ -42,11 +31,8 @@ function openDb() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const database = request.result;
-      if (!database.objectStoreNames.contains("profile")) database.createObjectStore("profile", { keyPath: "id" });
-      ["invoices", "mis", "bills"].forEach((store) => {
-        if (!database.objectStoreNames.contains(store)) {
-          database.createObjectStore(store, { keyPath: "id", autoIncrement: true });
-        }
+      STORES.forEach((store) => {
+        if (!database.objectStoreNames.contains(store)) database.createObjectStore(store, { keyPath: "id" });
       });
     };
     request.onsuccess = () => resolve(request.result);
@@ -54,374 +40,419 @@ function openDb() {
   });
 }
 
-function tx(store, mode = "readonly") {
-  return db.transaction(store, mode).objectStore(store);
+function store(name, mode = "readonly") {
+  return db.transaction(name, mode).objectStore(name);
 }
 
-function getAll(store) {
+function getAll(name) {
   return new Promise((resolve, reject) => {
-    const request = tx(store).getAll();
+    const request = store(name).getAll();
     request.onsuccess = () => resolve(request.result || []);
     request.onerror = () => reject(request.error);
   });
 }
 
-function put(store, value) {
+function put(name, value) {
   return new Promise((resolve, reject) => {
-    const request = tx(store, "readwrite").put(value);
+    const request = store(name, "readwrite").put(value);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 
-function clearStore(store) {
-  return new Promise((resolve, reject) => {
-    const request = tx(store, "readwrite").clear();
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
+async function ensureDefaultUser() {
+  const users = await getAll("users");
+  if (!users.length) await put("users", DEFAULT_USER);
 }
 
 async function loadAll() {
-  const profileRows = await getAll("profile");
-  state.profile = { ...defaults, ...(profileRows.find((row) => row.id === "main") || {}) };
-  state.invoices = (await getAll("invoices")).sort((a, b) => b.invoiceNo - a.invoiceNo);
-  state.mis = (await getAll("mis")).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  state.bills = (await getAll("bills")).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const entries = await Promise.all(STORES.map((name) => getAll(name)));
+  STORES.forEach((name, index) => state[name] = entries[index]);
+  if (!activeCompanyId && state.companies[0]) setActiveCompany(state.companies[0].id, false);
 }
 
 function bindUi() {
-  $("#loginForm").addEventListener("submit", handleLogin);
+  $("#loginForm").addEventListener("submit", login);
   $("#logoutBtn").addEventListener("click", logout);
-  $$(".tab").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.tab)));
+  $$(".nav-btn").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.tab)));
   $$("[data-jump]").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.jump)));
-  $("#profileForm").addEventListener("submit", saveProfile);
+  $("#companyForm").addEventListener("submit", saveCompany);
+  $("#newCompanyBtn").addEventListener("click", () => $("#companyForm").reset());
+  $("#userForm").addEventListener("submit", saveUser);
+  $("#ledgerForm").addEventListener("submit", saveLedger);
+  $("#newLedgerBtn").addEventListener("click", () => $("#ledgerForm").reset());
+  $("#voucherForm").addEventListener("submit", saveVoucher);
   $("#invoiceForm").addEventListener("submit", saveInvoice);
-  $("#misForm").addEventListener("submit", saveMis);
-  $("#billForm").addEventListener("submit", saveBill);
-  $("#newInvoiceBtn").addEventListener("click", resetInvoiceForm);
-  $("#addInvoiceRowBtn").addEventListener("click", () => addInvoiceRow());
-  $("#clearInvoiceRowsBtn").addEventListener("click", () => renderInvoiceRows(defaultInvoiceRowCount()));
-  $("#invoiceSearch").addEventListener("input", renderInvoices);
-  $("#exportBtn").addEventListener("click", exportBackup);
-  $("#importBtn").addEventListener("click", importBackup);
-  $$("[data-preview]").forEach((button) => button.addEventListener("click", () => previewDocument(button.dataset.preview)));
-  $$("[data-pdf]").forEach((button) => button.addEventListener("click", () => downloadDocumentPdf(button.dataset.pdf)));
-  $("#previewPrintBtn").addEventListener("click", printPreview);
-  $("#previewDownloadBtn").addEventListener("click", () => downloadDocumentPdf($("#previewDialog").dataset.type));
-  $("#previewCloseBtn").addEventListener("click", () => $("#previewDialog").close());
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstall = event;
-    $("#installBtn").hidden = false;
-  });
-  $("#installBtn").addEventListener("click", async () => {
-    if (!deferredInstall) return;
-    deferredInstall.prompt();
-    deferredInstall = null;
-    $("#installBtn").hidden = true;
-  });
+  $("#addInvoiceItemBtn").addEventListener("click", () => addInvoiceItem());
+  $("#stockForm").addEventListener("submit", saveStock);
+  $("#refreshReportsBtn").addEventListener("click", renderReports);
+  $("#exportBackupBtn").addEventListener("click", exportBackup);
+  $("#createBackupBtn").addEventListener("click", () => autoBackup("manual"));
+  $("#importBackupBtn").addEventListener("click", importBackup);
 }
 
-function handleLogin(event) {
+function setToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  ["voucherForm", "invoiceForm", "stockForm"].forEach((id) => {
+    const input = $(`#${id}`).elements.date;
+    if (input && !input.value) input.value = today;
+  });
+  $("#companyForm").elements.fyFrom.value ||= "2026-04-01";
+  $("#companyForm").elements.fyTo.value ||= "2027-03-31";
+}
+
+function login(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const username = form.elements.username.value.trim();
-  const password = form.elements.password.value;
-  const expectedUser = state.profile.loginUser || defaults.loginUser;
-  const expectedPass = state.profile.loginPass || defaults.loginPass;
-  if (username === expectedUser && password === expectedPass) {
-    sessionStorage.setItem("spark_accounts_logged_in", "yes");
-    $("#loginMessage").textContent = "";
-    form.reset();
-    applyAuthState();
+  const data = readForm(event.currentTarget);
+  const user = state.users.find((item) => item.userId === data.userId && item.password === data.password);
+  if (!user) {
+    $("#loginMessage").textContent = "Wrong User ID or Password";
     return;
   }
-  $("#loginMessage").textContent = "Wrong username or password";
+  currentUser = user;
+  sessionStorage.setItem("spark_erp_user", user.id);
+  event.currentTarget.reset();
+  applyAuth();
+  renderAll();
 }
 
 function logout() {
-  sessionStorage.removeItem("spark_accounts_logged_in");
-  applyAuthState();
+  currentUser = null;
+  sessionStorage.removeItem("spark_erp_user");
+  applyAuth();
 }
 
-function applyAuthState() {
-  const isLoggedIn = sessionStorage.getItem("spark_accounts_logged_in") === "yes";
-  document.body.classList.toggle("is-authenticated", isLoggedIn);
-  document.body.classList.toggle("is-locked", !isLoggedIn);
-  $("#loginScreen").hidden = isLoggedIn;
-  if (!isLoggedIn) {
-    setTimeout(() => $("#loginForm").elements.username.focus(), 50);
-  }
+function applyAuth() {
+  const saved = sessionStorage.getItem("spark_erp_user");
+  if (!currentUser && saved) currentUser = state.users.find((user) => user.id === saved) || null;
+  const ok = !!currentUser;
+  document.body.classList.toggle("is-locked", !ok);
+  $("#loginScreen").hidden = ok;
+  $("#activeRole").textContent = ok ? currentUser.role : "Locked";
 }
 
 function showTab(id) {
-  $$(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === id));
+  $$(".nav-btn").forEach((button) => button.classList.toggle("active", button.dataset.tab === id));
   $$(".panel").forEach((panel) => panel.classList.toggle("active", panel.id === id));
 }
 
-function setTodayDefaults() {
-  const today = new Date().toISOString().slice(0, 10);
-  ["invoiceForm", "misForm", "billForm"].forEach((formId) => {
-    const form = $(`#${formId}`);
-    const input = form.elements.date || form.elements.invoiceDate;
-    if (input && !input.value) input.value = today;
-  });
-  resetInvoiceForm();
+function activeCompany() {
+  return state.companies.find((company) => company.id === activeCompanyId) || null;
 }
 
-function fillForm(form, data) {
-  Object.keys(data).forEach((key) => {
-    if (form.elements[key]) form.elements[key].value = data[key] || "";
-  });
+function companyRows(rows) {
+  return rows.filter((row) => row.companyId === activeCompanyId);
 }
 
-function readForm(form) {
-  return Object.fromEntries(new FormData(form).entries());
+function setActiveCompany(id, rerender = true) {
+  activeCompanyId = id;
+  localStorage.setItem("spark_erp_active_company", id);
+  if (rerender) renderAll();
 }
 
-async function saveProfile(event) {
+async function saveCompany(event) {
   event.preventDefault();
-  const data = { ...readForm(event.currentTarget), id: "main" };
-  data.defaultInvoiceRows = Math.max(1, Number(data.defaultInvoiceRows || 1));
-  data.loginUser = data.loginUser || defaults.loginUser;
-  data.loginPass = data.loginPass || defaults.loginPass;
-  await put("profile", data);
-  await loadAll();
-  renderAll();
-  if (!getInvoiceItems().some((item) => item.description || item.monthFrom || item.monthTo || item.amount)) {
-    renderInvoiceRows(defaultInvoiceRowCount());
-  }
-  toast("Branding saved");
+  const data = readForm(event.currentTarget);
+  const company = { ...data, id: data.id || uid("cmp") };
+  await put("companies", company);
+  setActiveCompany(company.id, false);
+  await afterWrite("Company saved");
+  event.currentTarget.reset();
+}
+
+async function saveUser(event) {
+  event.preventDefault();
+  const data = readForm(event.currentTarget);
+  await put("users", { ...data, id: data.id || data.userId || uid("usr") });
+  await afterWrite("User saved");
+  event.currentTarget.reset();
+}
+
+async function saveLedger(event) {
+  event.preventDefault();
+  if (!requireCompany()) return;
+  const data = readForm(event.currentTarget);
+  await put("ledgers", { ...data, id: data.id || uid("led"), companyId: activeCompanyId, opening: num(data.opening) });
+  await afterWrite("Ledger saved");
+  event.currentTarget.reset();
+}
+
+async function saveVoucher(event) {
+  event.preventDefault();
+  if (!requireCompany()) return;
+  const data = readForm(event.currentTarget);
+  await put("vouchers", { ...data, id: uid("vch"), companyId: activeCompanyId, amount: num(data.amount), createdAt: now() });
+  await afterWrite("Voucher saved");
+  event.currentTarget.reset();
+  setToday();
 }
 
 async function saveInvoice(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const items = getInvoiceItems().filter((item) => item.description || item.monthFrom || item.monthTo || item.amount);
-  const data = {
-    invoiceNo: Number(form.elements.invoiceNo.value),
-    invoiceDate: form.elements.invoiceDate.value,
-    items,
-    description: items[0]?.description || "",
-    monthFrom: items[0]?.monthFrom || "",
-    monthTo: items[items.length - 1]?.monthTo || "",
-    amount: sum(items, "amount"),
-    createdAt: new Date().toISOString()
-  };
-  const incomplete = items.some((item) => !item.description || !item.monthFrom || !item.monthTo || !Number(item.amount));
-  if (!data.invoiceDate || !items.length || incomplete) return toast("Invoice rows complete karo");
-  const old = state.invoices.find((invoice) => invoice.invoiceNo === data.invoiceNo);
-  await put("invoices", old ? { ...old, ...data } : data);
-  await loadAll();
-  renderAll();
+  if (!requireCompany()) return;
+  const data = readForm(event.currentTarget);
+  const items = getInvoiceItems().filter((item) => item.item && item.qty && item.rate);
+  if (!items.length) return toast("Invoice item add karo");
+  const totals = invoiceTotals(items);
+  const invoice = { ...data, id: uid("inv"), companyId: activeCompanyId, invoiceNo: data.invoiceNo || nextInvoiceNo(), items, ...totals, createdAt: now() };
+  await put("invoices", invoice);
+  await afterWrite("GST invoice saved");
   resetInvoiceForm();
-  toast("Invoice saved");
 }
 
-async function saveMis(event) {
+async function saveStock(event) {
   event.preventDefault();
-  const data = { ...readForm(event.currentTarget), amount: Number(event.currentTarget.elements.amount.value), createdAt: new Date().toISOString() };
-  await put("mis", data);
+  if (!requireCompany()) return;
+  const data = readForm(event.currentTarget);
+  await put("stock", { ...data, id: uid("stk"), companyId: activeCompanyId, qty: num(data.qty), rate: num(data.rate), createdAt: now() });
+  await afterWrite("Stock entry saved");
   event.currentTarget.reset();
-  setTodayDefaults();
-  await loadAll();
-  renderAll();
-  toast("MIS saved");
+  setToday();
 }
 
-async function saveBill(event) {
-  event.preventDefault();
-  const data = { ...readForm(event.currentTarget), amount: Number(event.currentTarget.elements.amount.value), createdAt: new Date().toISOString() };
-  await put("bills", data);
-  event.currentTarget.reset();
-  setTodayDefaults();
+async function afterWrite(message) {
   await loadAll();
   renderAll();
-  toast("Bill saved");
+  await autoBackup("auto");
+  toast(message);
+}
+
+function renderAll() {
+  renderHeader();
+  renderCompanyList();
+  renderUserList();
+  renderLedgerList();
+  renderLedgerOptions();
+  renderVoucherList();
+  renderInvoiceItems();
+  renderInvoiceList();
+  renderStock();
+  renderReports();
+  renderGst();
+  renderBackupList();
+}
+
+function renderHeader() {
+  const company = activeCompany();
+  $("#activeCompanyName").textContent = company ? company.name : "No Company";
+  $("#dashCompany").textContent = company ? company.name : "-";
+  $("#dashFy").textContent = company ? `${dateShort(company.fyFrom)} to ${dateShort(company.fyTo)}` : "-";
+  $("#dashUser").textContent = currentUser ? `${currentUser.userId} (${currentUser.role})` : "-";
+  $("#dashBackup").textContent = localStorage.getItem("spark_erp_last_backup") || "-";
+  $("#statLedgers").textContent = companyRows(state.ledgers).length;
+  $("#statVouchers").textContent = companyRows(state.vouchers).length;
+  $("#statInvoices").textContent = companyRows(state.invoices).length;
+  $("#statStock").textContent = stockSummary().length;
+  $("#invoiceForm").elements.invoiceNo.value ||= nextInvoiceNo();
 }
 
 function resetInvoiceForm() {
   const form = $("#invoiceForm");
-  const today = new Date().toISOString().slice(0, 10);
   form.reset();
   form.elements.invoiceNo.value = nextInvoiceNo();
-  form.elements.invoiceDate.value = today;
-  renderInvoiceRows(defaultInvoiceRowCount());
-  updateWords();
+  form.elements.date.value = new Date().toISOString().slice(0, 10);
+  $("#invoiceItems").innerHTML = "";
+  addInvoiceItem();
+  updateInvoiceTotal();
 }
 
-function nextInvoiceNo() {
-  return state.invoices.reduce((max, invoice) => Math.max(max, Number(invoice.invoiceNo || 0)), 0) + 1;
+function renderCompanyList() {
+  $("#companyList").innerHTML = table(["Company", "GSTIN", "FY", "Action"], state.companies.map((row) => [
+    row.name, row.gstin || "", `${dateShort(row.fyFrom)} to ${dateShort(row.fyTo)}`,
+    `<button type="button" onclick="selectCompany('${row.id}')">Open</button>`
+  ]));
 }
 
-function updateWords() {
-  $("#invoiceWords").textContent = amountToIndianWords(sum(getInvoiceItems(), "amount"));
+window.selectCompany = (id) => setActiveCompany(id);
+
+function renderUserList() {
+  $("#userList").innerHTML = table(["User ID", "Role"], state.users.map((row) => [row.userId, row.role]));
 }
 
-function renderAll() {
-  fillForm($("#profileForm"), state.profile);
-  renderDescriptionList();
-  renderBindings();
-  renderDashboard();
-  renderInvoices();
-  renderMis();
-  renderBills();
-  renderBalance();
+function renderLedgerList() {
+  const rows = companyRows(state.ledgers);
+  $("#ledgerList").innerHTML = table(["Ledger", "Group", "Opening", "GSTIN"], rows.map((row) => [row.name, row.group, `${money(row.opening)} ${row.balanceType}`, row.gstin || ""]));
 }
 
-function renderBindings() {
-  $$("[data-bind]").forEach((node) => {
-    node.textContent = state.profile[node.dataset.bind] || "";
+function renderLedgerOptions() {
+  const ledgers = companyRows(state.ledgers);
+  const options = ledgers.map((row) => `<option value="${row.id}">${escapeHtml(row.name)}</option>`).join("");
+  ["debitLedger", "creditLedger", "partyLedger"].forEach((name) => {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (el) el.innerHTML = `<option value="">Select Ledger</option>${options}`;
   });
-  $("#todayStatus").textContent = dateShort(new Date().toISOString().slice(0, 10));
-  $("#factOwner").textContent = state.profile.owner || "-";
-  $("#factMobile").textContent = state.profile.mobile || "-";
-  $("#factGstin").textContent = state.profile.gstin || "-";
-  $("#factEmail").textContent = state.profile.email || "-";
 }
 
-function renderDashboard() {
-  const income = sum(state.invoices, "amount") + sum(state.mis, "amount");
-  const expense = sum(state.bills, "amount");
-  $("#dashIncome").textContent = money(income);
-  $("#dashExpense").textContent = money(expense);
-  $("#dashBalance").textContent = money(income - expense);
-  $("#dashInvoices").textContent = String(state.invoices.length);
-  const recent = [
-    ...state.invoices.map((row) => ({ label: `Invoice ${row.invoiceNo}`, date: row.invoiceDate, amount: row.amount })),
-    ...state.mis.map((row) => ({ label: `MIS ${row.vehicle}`, date: row.date, amount: row.amount })),
-    ...state.bills.map((row) => ({ label: `Bill ${row.type}`, date: row.date, amount: -row.amount }))
-  ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8);
-  $("#recentList").innerHTML = recent.length ? table(["Date", "Particular", "Amount"], recent.map((r) => [dateShort(r.date), r.label, money(r.amount)])) : "No entries yet.";
+function renderVoucherList() {
+  const rows = companyRows(state.vouchers).sort((a, b) => b.date.localeCompare(a.date));
+  $("#voucherList").innerHTML = table(["Date", "Type", "Dr", "Cr", "Amount", "Narration"], rows.map((row) => [
+    dateShort(row.date), row.type, ledgerName(row.debitLedger), ledgerName(row.creditLedger), money(row.amount), row.narration || ""
+  ]));
 }
 
-function renderInvoices() {
-  const search = $("#invoiceSearch").value.trim();
-  const rows = state.invoices.filter((row) => !search || String(row.invoiceNo).includes(search));
-  $("#invoiceList").innerHTML = table(["Invoice No.", "Date", "Rows", "Description", "Month", "Amount", "Action"], rows.map((row) => {
-    const items = invoiceItems(row);
-    return [
-      row.invoiceNo,
-      dateShort(row.invoiceDate),
-      items.length,
-      items[0]?.description || row.description || "",
-      `${dateLong(items[0]?.monthFrom || row.monthFrom)} To ${dateLong(items[items.length - 1]?.monthTo || row.monthTo)}`,
-      money(row.amount),
-      `<div class="row-actions"><button type="button" onclick="editInvoice(${row.invoiceNo})">Edit</button></div>`
-    ];
-  }));
+function renderInvoiceItems() {
+  const tbody = $("#invoiceItems");
+  if (!tbody.children.length) addInvoiceItem();
+  updateInvoiceTotal();
 }
 
-window.editInvoice = (invoiceNo) => {
-  const row = state.invoices.find((invoice) => invoice.invoiceNo === invoiceNo);
-  if (!row) return;
-  const form = $("#invoiceForm");
-  fillForm(form, row);
-  renderInvoiceRows(invoiceItems(row));
-  updateWords();
-  showTab("invoice");
-};
-
-function renderDescriptionList() {
-  $("#descList").innerHTML = descriptionOptions().map((item) => `<option value="${escapeHtml(item)}"></option>`).join("");
-}
-
-function descriptionOptions() {
-  const defaultsList = defaults.descriptionMaster.split("\n");
-  const customList = String(state.profile.descriptionMaster || "").split(/\r?\n/);
-  return [...new Set([...customList, ...defaultsList].map((item) => item.trim()).filter(Boolean))];
-}
-
-function defaultInvoiceRowCount() {
-  return Math.max(1, Math.min(20, Number(state.profile.defaultInvoiceRows || 1)));
-}
-
-function renderInvoiceRows(rowsOrCount = 1) {
-  const rows = Array.isArray(rowsOrCount) ? rowsOrCount : Array.from({ length: rowsOrCount }, () => ({}));
-  $("#invoiceRows").innerHTML = "";
-  rows.forEach((item) => addInvoiceRow(item, false));
-  renumberInvoiceRows();
-  updateWords();
-}
-
-function addInvoiceRow(item = {}, focus = true) {
+function addInvoiceItem(item = {}) {
   const tr = document.createElement("tr");
-  tr.className = "invoice-row";
   tr.innerHTML = `
-    <td class="row-serial"></td>
-    <td><input class="row-description" list="descList" value="${escapeHtml(item.description || "")}" placeholder="Description"></td>
-    <td><input class="row-month-from" type="date" value="${escapeHtml(item.monthFrom || "")}"></td>
-    <td><input class="row-month-to" type="date" value="${escapeHtml(item.monthTo || "")}"></td>
-    <td><input class="row-amount" type="number" min="0" step="0.01" value="${item.amount ? Number(item.amount) : ""}" placeholder="0.00"></td>
-    <td><button class="ghost row-remove" type="button">Remove</button></td>
+    <td><input class="item-name" value="${escapeHtml(item.item || "")}" placeholder="Item"></td>
+    <td><input class="item-hsn" value="${escapeHtml(item.hsn || "")}" placeholder="HSN"></td>
+    <td><input class="item-qty" type="number" step="0.01" value="${item.qty || ""}"></td>
+    <td><input class="item-rate" type="number" step="0.01" value="${item.rate || ""}"></td>
+    <td><input class="item-gst" type="number" step="0.01" value="${item.gst || 18}"></td>
+    <td class="line-total">0.00</td>
+    <td><button class="ghost" type="button">X</button></td>
   `;
-  tr.addEventListener("input", updateWords);
-  tr.querySelector(".row-remove").addEventListener("click", () => {
-    if ($$("#invoiceRows tr").length > 1) tr.remove();
-    else tr.querySelectorAll("input").forEach((input) => input.value = "");
-    renumberInvoiceRows();
-    updateWords();
+  tr.addEventListener("input", updateInvoiceTotal);
+  tr.querySelector("button").addEventListener("click", () => {
+    if ($$("#invoiceItems tr").length > 1) tr.remove();
+    updateInvoiceTotal();
   });
-  $("#invoiceRows").appendChild(tr);
-  renumberInvoiceRows();
-  if (focus) tr.querySelector(".row-description").focus();
-}
-
-function renumberInvoiceRows() {
-  $$("#invoiceRows tr").forEach((row, index) => {
-    row.querySelector(".row-serial").textContent = String(index + 1).padStart(2, "0");
-  });
+  $("#invoiceItems").appendChild(tr);
+  updateInvoiceTotal();
 }
 
 function getInvoiceItems() {
-  return $$("#invoiceRows tr").map((row) => ({
-    description: row.querySelector(".row-description")?.value.trim() || "",
-    monthFrom: row.querySelector(".row-month-from")?.value || "",
-    monthTo: row.querySelector(".row-month-to")?.value || "",
-    amount: Number(row.querySelector(".row-amount")?.value || 0)
-  }));
+  return $$("#invoiceItems tr").map((row) => {
+    const item = row.querySelector(".item-name").value.trim();
+    const hsn = row.querySelector(".item-hsn").value.trim();
+    const qty = num(row.querySelector(".item-qty").value);
+    const rate = num(row.querySelector(".item-rate").value);
+    const gst = num(row.querySelector(".item-gst").value);
+    const taxable = qty * rate;
+    const gstAmount = taxable * gst / 100;
+    return { item, hsn, qty, rate, gst, taxable, gstAmount, total: taxable + gstAmount };
+  });
 }
 
-function invoiceItems(invoice) {
-  if (Array.isArray(invoice.items) && invoice.items.length) return invoice.items.map((item) => ({ ...item, amount: Number(item.amount || 0) }));
-  return [{
-    description: invoice.description || "",
-    monthFrom: invoice.monthFrom || "",
-    monthTo: invoice.monthTo || "",
-    amount: Number(invoice.amount || 0)
-  }];
+function updateInvoiceTotal() {
+  const items = getInvoiceItems();
+  $$("#invoiceItems tr").forEach((row, index) => row.querySelector(".line-total").textContent = money(items[index].total));
+  $("#invoiceTotal").textContent = `Total: ${money(items.reduce((sum, item) => sum + item.total, 0))}`;
 }
 
-function renderMis() {
-  $("#misList").innerHTML = table(["Date", "Vehicle", "Party", "Route", "Ref", "Amount"], state.mis.map((row) => [
-    dateShort(row.date), row.vehicle, row.party, row.route || "", row.reference || "", money(row.amount)
+function invoiceTotals(items) {
+  return {
+    taxable: items.reduce((sum, item) => sum + item.taxable, 0),
+    gstAmount: items.reduce((sum, item) => sum + item.gstAmount, 0),
+    total: items.reduce((sum, item) => sum + item.total, 0)
+  };
+}
+
+function renderInvoiceList() {
+  const rows = companyRows(state.invoices).sort((a, b) => b.date.localeCompare(a.date));
+  $("#invoiceList").innerHTML = table(["Date", "Type", "Invoice", "Party", "Taxable", "GST", "Total"], rows.map((row) => [
+    dateShort(row.date), row.type, row.invoiceNo, ledgerName(row.partyLedger), money(row.taxable), money(row.gstAmount), money(row.total)
   ]));
 }
 
-function renderBills() {
-  $("#billList").innerHTML = table(["Date", "Type", "Vendor", "Bill No.", "Amount", "Notes"], state.bills.map((row) => [
-    dateShort(row.date), row.type, row.vendor, row.billNo || "", money(row.amount), row.notes || ""
-  ]));
+function renderStock() {
+  $("#stockSummary").innerHTML = table(["Item", "Qty", "Value"], stockSummary().map((row) => [row.item, money(row.qty), money(row.value)]));
+  const rows = companyRows(state.stock).sort((a, b) => b.date.localeCompare(a.date));
+  $("#stockList").innerHTML = table(["Date", "Item", "Type", "Qty", "Rate", "Notes"], rows.map((row) => [dateShort(row.date), row.item, row.type, money(row.qty), money(row.rate), row.notes || ""]));
 }
 
-function renderBalance() {
-  const invoiceIncome = sum(state.invoices, "amount");
-  const misIncome = sum(state.mis, "amount");
-  const expense = sum(state.bills, "amount");
-  $("#balanceSheet").innerHTML = `
-    <section class="balance-box">
-      <h2>Assets / Income</h2>
-      <div class="balance-row"><span>Invoice Income</span><strong>${money(invoiceIncome)}</strong></div>
-      <div class="balance-row"><span>MIS Income</span><strong>${money(misIncome)}</strong></div>
-      <div class="balance-row"><span>Total Income</span><strong>${money(invoiceIncome + misIncome)}</strong></div>
-    </section>
-    <section class="balance-box">
-      <h2>Liabilities / Expenses</h2>
-      <div class="balance-row"><span>Total Bills</span><strong>${money(expense)}</strong></div>
-      <div class="balance-row"><span>Closing Balance</span><strong>${money(invoiceIncome + misIncome - expense)}</strong></div>
-    </section>
-  `;
+function stockSummary() {
+  const map = new Map();
+  companyRows(state.stock).forEach((row) => {
+    const current = map.get(row.item) || { item: row.item, qty: 0, value: 0 };
+    const sign = row.type === "Stock Out" ? -1 : 1;
+    current.qty += sign * num(row.qty);
+    current.value += sign * num(row.qty) * num(row.rate);
+    map.set(row.item, current);
+  });
+  return [...map.values()];
+}
+
+function renderReports() {
+  const balances = ledgerBalances();
+  $("#trialBalance").innerHTML = table(["Ledger", "Debit", "Credit"], balances.map((row) => [row.name, row.balance >= 0 ? money(row.balance) : "", row.balance < 0 ? money(Math.abs(row.balance)) : ""]));
+  const sales = companyRows(state.invoices).filter((row) => row.type === "Sales").reduce((sum, row) => sum + num(row.taxable), 0);
+  const purchase = companyRows(state.invoices).filter((row) => row.type === "Purchase").reduce((sum, row) => sum + num(row.taxable), 0);
+  const expenses = balances.filter((row) => row.group === "Expense").reduce((sum, row) => sum + Math.max(row.balance, 0), 0);
+  $("#profitLoss").innerHTML = `<div><span>Sales</span><strong>${money(sales)}</strong></div><div><span>Purchase</span><strong>${money(purchase)}</strong></div><div><span>Expenses</span><strong>${money(expenses)}</strong></div><div><span>Net Profit</span><strong>${money(sales - purchase - expenses)}</strong></div>`;
+  $("#ledgerReport").innerHTML = table(["Ledger", "Group", "Balance"], balances.map((row) => [row.name, row.group, `${money(Math.abs(row.balance))} ${row.balance >= 0 ? "Dr" : "Cr"}`]));
+}
+
+function ledgerBalances() {
+  return companyRows(state.ledgers).map((ledger) => {
+    let balance = num(ledger.opening) * (ledger.balanceType === "Cr" ? -1 : 1);
+    companyRows(state.vouchers).forEach((voucher) => {
+      if (voucher.debitLedger === ledger.id) balance += num(voucher.amount);
+      if (voucher.creditLedger === ledger.id) balance -= num(voucher.amount);
+    });
+    companyRows(state.invoices).forEach((invoice) => {
+      if (invoice.partyLedger === ledger.id) balance += invoice.type === "Sales" ? num(invoice.total) : -num(invoice.total);
+    });
+    return { ...ledger, balance };
+  });
+}
+
+function renderGst() {
+  const rows = companyRows(state.invoices);
+  const salesTax = rows.filter((row) => row.type === "Sales").reduce((sum, row) => sum + num(row.gstAmount), 0);
+  const purchaseTax = rows.filter((row) => row.type === "Purchase").reduce((sum, row) => sum + num(row.gstAmount), 0);
+  $("#gstSummary").innerHTML = table(["Particular", "Amount"], [
+    ["Output GST on Sales", money(salesTax)],
+    ["Input GST on Purchase", money(purchaseTax)],
+    ["Net GST Payable", money(salesTax - purchaseTax)]
+  ]);
+}
+
+async function autoBackup(reason) {
+  const payload = makeBackupPayload(reason);
+  await put("backups", { id: uid("bak"), companyId: activeCompanyId || "all", reason, createdAt: now(), payload });
+  localStorage.setItem("spark_erp_last_backup", new Date().toLocaleString("en-IN"));
+  await loadAll();
+  renderBackupList();
+}
+
+function renderBackupList() {
+  $("#backupList").innerHTML = table(["Date", "Reason", "Company"], state.backups.slice(-20).reverse().map((row) => [new Date(row.createdAt).toLocaleString("en-IN"), row.reason, row.companyId]));
+}
+
+function makeBackupPayload(reason = "export") {
+  return { app: "Spark ERP Phase 1", reason, exportedAt: now(), activeCompanyId, data: state };
+}
+
+function exportBackup() {
+  const payload = makeBackupPayload("export");
+  download(`spark-erp-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json");
+}
+
+async function importBackup() {
+  const file = $("#importBackupFile").files[0];
+  if (!file) return toast("Backup file select karo");
+  const payload = JSON.parse(await file.text());
+  const data = payload.data || {};
+  for (const name of STORES) {
+    const tx = db.transaction(name, "readwrite").objectStore(name);
+    await new Promise((resolve, reject) => {
+      const req = tx.clear();
+      req.onsuccess = resolve;
+      req.onerror = () => reject(req.error);
+    });
+    for (const row of data[name] || []) await put(name, row);
+  }
+  activeCompanyId = payload.activeCompanyId || "";
+  await loadAll();
+  renderAll();
+  toast("Backup imported");
+}
+
+function requireCompany() {
+  if (activeCompany()) return true;
+  toast("Pehle company create/select karo");
+  showTab("companies");
+  return false;
+}
+
+function readForm(form) {
+  return Object.fromEntries(new FormData(form).entries());
 }
 
 function table(headers, rows) {
@@ -429,261 +460,38 @@ function table(headers, rows) {
   return `<table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
-function previewDocument(type) {
-  const doc = buildDocument(type);
-  if (!doc) return;
-  $("#previewDialog").dataset.type = type;
-  $("#previewTitle").textContent = doc.title;
-  $("#previewFrame").srcdoc = previewShell(doc.html);
-  $("#previewDialog").showModal();
+function ledgerName(id) {
+  return state.ledgers.find((row) => row.id === id)?.name || "";
 }
 
-function printPreview() {
-  const frame = $("#previewFrame");
-  frame.contentWindow.focus();
-  frame.contentWindow.print();
+function nextInvoiceNo() {
+  return String(companyRows(state.invoices).length + 1).padStart(4, "0");
 }
 
-function downloadDocumentPdf(type) {
-  const doc = buildDocument(type);
-  if (!doc) return;
-  const pdf = buildPdf(doc);
-  download(doc.filename, pdf, "application/pdf");
+function uid(prefix) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function buildDocument(type) {
-  const head = printHead();
-  const docs = {
-    invoice: () => ({ title: "Invoice PDF", filename: `invoice_${$("#invoiceForm").elements.invoiceNo.value || "draft"}_${safeDate($("#invoiceForm").elements.invoiceDate.value)}.pdf`, html: printInvoice(), lines: invoicePdfLines() }),
-    "business-card": () => ({ title: "Business Card PDF", filename: "spark_accounts_business_card.pdf", html: `<div class="print-sheet card-sheet">${$("#businessCardPrint").innerHTML}</div>`, lines: businessCardPdfLines() }),
-    letterhead: () => ({ title: "Letterhead PDF", filename: "spark_accounts_letterhead.pdf", html: printLetterhead(), lines: letterheadPdfLines() }),
-    mis: () => ({ title: "MIS Register PDF", filename: `mis_register_${safeDate(new Date().toISOString().slice(0, 10))}.pdf`, html: `<div class="print-sheet">${head}<h2>MIS Register</h2>${$("#misList").innerHTML}</div>`, lines: registerPdfLines("MIS Register", ["Date", "Vehicle", "Party", "Route", "Ref", "Amount"], state.mis.map((row) => [dateShort(row.date), row.vehicle, row.party, row.route || "", row.reference || "", money(row.amount)])) }),
-    bills: () => ({ title: "Bills Register PDF", filename: `bills_register_${safeDate(new Date().toISOString().slice(0, 10))}.pdf`, html: `<div class="print-sheet">${head}<h2>Bill Register</h2>${$("#billList").innerHTML}</div>`, lines: registerPdfLines("Bill Register", ["Date", "Type", "Vendor", "Bill No.", "Amount"], state.bills.map((row) => [dateShort(row.date), row.type, row.vendor, row.billNo || "", money(row.amount)])) }),
-    balance: () => ({ title: "Balance Sheet PDF", filename: `balance_sheet_${safeDate(new Date().toISOString().slice(0, 10))}.pdf`, html: `<div class="print-sheet">${head}<h2>Balance Sheet</h2>${$("#balanceSheet").innerHTML}</div>`, lines: balancePdfLines() })
-  };
-  return docs[type] ? docs[type]() : null;
+function now() {
+  return new Date().toISOString();
 }
 
-function printHead() {
-  return `<header class="print-head"><img src="assets/spark-logo.avif" alt=""><div><h2>${escapeHtml(state.profile.companyName)}</h2><p>${escapeHtml(state.profile.address)}</p><p>Mob: ${escapeHtml(state.profile.mobile)}</p><p>${escapeHtml(state.profile.email)}</p></div></header>`;
+function num(value) {
+  return Number(value || 0);
 }
 
-function printLetterhead() {
-  return `<div class="print-sheet letterhead-sheet">${printHead()}<div class="letterhead-body"></div><footer class="letterhead-footer"><p>${escapeHtml(state.profile.bank || "")}</p><p><strong>Authorized Signatory</strong></p></footer></div>`;
+function money(value) {
+  return num(value).toFixed(2);
 }
 
-function printInvoice() {
-  const form = $("#invoiceForm");
-  const invoice = readForm(form);
-  const items = getInvoiceItems().filter((item) => item.description || item.monthFrom || item.monthTo || item.amount);
-  const amount = sum(items, "amount");
-  const itemRows = (items.length ? items : [{}]).map((item, index) => `
-      <tr>
-        <td>${String(index + 1).padStart(2, "0")}</td>
-        <td>${escapeHtml(item.description || "")}</td>
-        <td>${dateLong(item.monthFrom)} To ${dateLong(item.monthTo)}</td>
-        <td>${money(item.amount)}</td>
-      </tr>`).join("");
-  return `<div class="print-sheet">${printHead()}<h2>INVOICE BILL</h2>
-    <table class="print-table">
-      <tr><th colspan="2">TO, TVS SUPPLY CHAIN<br>SOLUTIONS LTD RANCHI<br>JHARKHAND<br>GSTIN: 20AACCT1412E1Z9</th><th colspan="2">INVOICE NO.: ${escapeHtml(invoice.invoiceNo)}<br>INVOICE DATE ${dateShort(invoice.invoiceDate)}</th></tr>
-      <tr><th>SERIAL NO.</th><th>DESCRIPTION</th><th>MONTH OF BILL</th><th>AMOUNT</th></tr>
-      ${itemRows}
-      <tr><th colspan="3">Net Amount</th><th>${money(amount)}</th></tr>
-    </table>
-    <p><strong>AMOUNT IN WORDS: ${amountToIndianWords(amount)}</strong></p>
-    <p>AGENCY (GTA) IS EXEMPT UNDER GST as per entry no. 22 of Notification No. 12/2017 Central Tax Rate 28,2017.</p>
-  </div>`;
-}
-
-function previewShell(content) {
-  return `<!doctype html><html><head><meta charset="utf-8"><style>${printCss()}</style></head><body>${content}</body></html>`;
-}
-
-function printCss() {
-  return `
-    body{margin:0;background:#eef2f0;font-family:Arial,Helvetica,sans-serif;color:#000}
-    .print-sheet{width:190mm;min-height:277mm;margin:12px auto;background:white;padding:8mm;box-shadow:0 10px 28px rgba(0,0,0,.14)}
-    .print-head{display:grid;grid-template-columns:70px 1fr;gap:12px;align-items:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px}
-    .print-head img{width:64px}.print-head h2{margin:0;font-size:24px}.print-head p{margin:2px 0}
-    table{width:100%;border-collapse:collapse}.print-table th,.print-table td,th,td{border:1px solid #000;padding:8px;text-align:left;vertical-align:top}
-    th{font-weight:700}.letterhead-body{height:220mm}.letterhead-footer{display:flex;justify-content:space-between;gap:20px;border-top:1px solid #000;padding-top:10px}
-    .card-sheet{display:grid;place-items:center}.card-face{width:90mm;height:52mm;border:1px solid #000;padding:6mm;display:grid;grid-template-columns:24mm 1fr;gap:4mm}.card-face img{width:22mm}.card-face h2{margin:0;font-size:15px}.card-face p{margin:2px 0 8px}.card-face strong,.card-face span,.card-face small{grid-column:2}
-  `;
-}
-
-function invoicePdfLines() {
-  const form = $("#invoiceForm");
-  const invoice = readForm(form);
-  const items = getInvoiceItems().filter((item) => item.description || item.monthFrom || item.monthTo || item.amount);
-  const amount = sum(items, "amount");
-  const lines = [
-    ...companyPdfHeader(),
-    "",
-    "INVOICE BILL",
-    `Invoice No.: ${invoice.invoiceNo || ""}`,
-    `Invoice Date: ${dateShort(invoice.invoiceDate)}`,
-    "To: TVS SUPPLY CHAIN SOLUTIONS LTD RANCHI JHARKHAND",
-    "GSTIN: 20AACCT1412E1Z9",
-    "",
-    "SERIAL NO.    DESCRIPTION                  MONTH OF BILL                       AMOUNT"
-  ];
-  (items.length ? items : [{}]).forEach((item, index) => {
-    lines.push(`${String(index + 1).padStart(2, "0")}            ${item.description || ""}    ${dateLong(item.monthFrom)} To ${dateLong(item.monthTo)}    ${money(item.amount)}`);
-  });
-  lines.push(
-    "",
-    `Net Amount: ${money(amount)}`,
-    `Amount in words: ${amountToIndianWords(amount)}`,
-    "AGENCY (GTA) IS EXEMPT UNDER GST as per entry no. 22 of Notification No. 12/2017 Central Tax Rate 28,2017."
-  );
-  return [
-    ...lines
-  ];
-}
-
-function businessCardPdfLines() {
-  return [...companyPdfHeader(), "", `Contact Person: ${state.profile.owner || ""}`, `Tagline: ${state.profile.tagline || ""}`];
-}
-
-function letterheadPdfLines() {
-  return [...companyPdfHeader(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Authorized Signatory"];
-}
-
-function registerPdfLines(title, headers, rows) {
-  const lines = [...companyPdfHeader(), "", title, headers.join(" | "), "-".repeat(96)];
-  rows.forEach((row) => lines.push(row.join(" | ")));
-  if (!rows.length) lines.push("No records.");
-  return lines;
-}
-
-function balancePdfLines() {
-  const invoiceIncome = sum(state.invoices, "amount");
-  const misIncome = sum(state.mis, "amount");
-  const expense = sum(state.bills, "amount");
-  return [
-    ...companyPdfHeader(),
-    "",
-    "Balance Sheet",
-    `Invoice Income: ${money(invoiceIncome)}`,
-    `MIS Income: ${money(misIncome)}`,
-    `Total Income: ${money(invoiceIncome + misIncome)}`,
-    `Total Bills: ${money(expense)}`,
-    `Closing Balance: ${money(invoiceIncome + misIncome - expense)}`
-  ];
-}
-
-function companyPdfHeader() {
-  return [
-    state.profile.companyName || "",
-    state.profile.address || "",
-    `Mob: ${state.profile.mobile || ""}`,
-    state.profile.email || "",
-    state.profile.gstin ? `GSTIN: ${state.profile.gstin}` : ""
-  ].filter(Boolean);
-}
-
-function buildPdf(doc) {
-  const lines = doc.lines || [];
-  const pages = [];
-  for (let i = 0; i < lines.length; i += 40) pages.push(lines.slice(i, i + 40));
-  if (!pages.length) pages.push(["No data"]);
-  const fontNormal = 3 + pages.length * 2;
-  const fontBold = fontNormal + 1;
-  const kids = [];
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    ""
-  ];
-  pages.forEach((pageLines, index) => {
-    const pageObj = 3 + index * 2;
-    const contentObj = pageObj + 1;
-    const stream = pdfStream(pageLines, index === 0 ? doc.title : "");
-    kids.push(`${pageObj} 0 R`);
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontNormal} 0 R /F2 ${fontBold} 0 R >> >> /Contents ${contentObj} 0 R >>`);
-    objects.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
-  });
-  objects[1] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pages.length} >>`;
-  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  objects.forEach((obj, index) => {
-    offsets.push(pdf.length);
-    pdf += `${index + 1} 0 obj\n${obj}\nendobj\n`;
-  });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  offsets.slice(1).forEach((offset) => {
-    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
-  });
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return new Blob([pdf], { type: "application/pdf" });
-}
-
-function pdfStream(lines, title) {
-  const out = ["BT", "/F2 15 Tf", "48 795 Td", `(${pdfText(title)}) Tj`, "/F1 10 Tf", "0 -24 Td"];
-  lines.forEach((line) => {
-    wrapPlain(line, 92).forEach((part) => {
-      out.push(`(${pdfText(part)}) Tj`, "0 -15 Td");
-    });
-  });
-  out.push("ET");
-  return out.join("\n");
-}
-
-function wrapPlain(text, limit) {
-  const words = String(text || "").split(/\s+/);
-  const lines = [];
-  let line = "";
-  words.forEach((word) => {
-    if (`${line} ${word}`.trim().length > limit) {
-      if (line) lines.push(line);
-      line = word;
-    } else {
-      line = `${line} ${word}`.trim();
-    }
-  });
-  if (line) lines.push(line);
-  return lines.length ? lines : [""];
-}
-
-function pdfText(value) {
-  return String(value || "").replace(/[^\x20-\x7E]/g, " ").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-}
-
-function safeDate(value) {
-  return (value || new Date().toISOString().slice(0, 10)).replaceAll("-", ".");
+function dateShort(value) {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
 }
 
 function escapeHtml(value) {
-  return String(value || "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
-}
-
-async function exportBackup() {
-  const payload = { exportedAt: new Date().toISOString(), version: 1, data: state };
-  download(`spark-accounts-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json");
-}
-
-async function importBackup() {
-  const file = $("#importFile").files[0];
-  if (!file) return toast("Backup JSON select karo");
-  const payload = JSON.parse(await file.text());
-  const data = payload.data || payload;
-  for (const store of STORES) await clearStore(store);
-  await put("profile", { ...(data.profile || defaults), id: "main" });
-  for (const row of data.invoices || []) await put("invoices", row);
-  for (const row of data.mis || []) await put("mis", row);
-  for (const row of data.bills || []) await put("bills", row);
-  await loadAll();
-  renderAll();
-  toast("Backup imported");
+  return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 }
 
 function download(filename, content, type) {
@@ -698,45 +506,6 @@ function download(filename, content, type) {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
-}
-
-function sum(rows, key) {
-  return rows.reduce((total, row) => total + Number(row[key] || 0), 0);
-}
-
-function money(value) {
-  return Number(value || 0).toFixed(2);
-}
-
-function dateShort(value) {
-  if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
-  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
-}
-
-function dateLong(value) {
-  if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
-  return `${date.getDate()} ${date.toLocaleString("en-IN", { month: "short" })} ${date.getFullYear()}`;
-}
-
-function amountToIndianWords(amount) {
-  const number = Math.floor(Number(amount || 0));
-  if (!number) return "Rupees Zero Only.";
-  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-  const two = (n) => (n < 20 ? ones[n] : `${tens[Math.floor(n / 10)]} ${ones[n % 10]}`.trim());
-  const three = (n) => `${n > 99 ? `${ones[Math.floor(n / 100)]} Hundred ` : ""}${two(n % 100)}`.trim();
-  const parts = [];
-  let n = number;
-  const crore = Math.floor(n / 10000000); n %= 10000000;
-  const lakh = Math.floor(n / 100000); n %= 100000;
-  const thousand = Math.floor(n / 1000); n %= 1000;
-  if (crore) parts.push(`${three(crore)} Crore`);
-  if (lakh) parts.push(`${three(lakh)} Lakh`);
-  if (thousand) parts.push(`${three(thousand)} Thousand`);
-  if (n) parts.push(three(n));
-  return `Rupees ${parts.join(" ")} Only.`;
 }
 
 function toast(message) {
