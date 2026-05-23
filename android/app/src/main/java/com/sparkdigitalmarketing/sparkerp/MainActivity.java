@@ -27,7 +27,7 @@ import java.util.Map;
 
 public class MainActivity extends Activity {
     private static final String APP_HOST = "spark-erp.local";
-    private static final String START_URL = "https://" + APP_HOST + "/index.html?v=27";
+    private static final String START_URL = "https://" + APP_HOST + "/index.html?v=28";
     private static final String APK_MIME = "application/vnd.android.package-archive";
     private WebView webView;
     private long updateDownloadId = -1L;
@@ -190,6 +190,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void downloadApk(String url) {
             runOnUiThread(() -> MainActivity.this.downloadApk(url));
+        }
+
+        @JavascriptInterface
+        public void openUrl(String url) {
+            runOnUiThread(() -> MainActivity.this.openExternal(url));
         }
     }
 }

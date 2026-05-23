@@ -1,7 +1,8 @@
 "use strict";
 
-const APP_VERSION = "1.0.7";
+const APP_VERSION = "1.0.8";
 const RELEASE_API = "https://api.github.com/repos/MrRoBoTRaJa/spark-erp/releases/latest";
+const RELEASE_PAGE = "https://github.com/MrRoBoTRaJa/spark-erp/releases/latest";
 const DB_NAME = "spark_erp_phase1";
 const DB_VERSION = 3;
 const STORES = ["users", "companies", "ledgers", "costCategories", "costCentres", "vouchers", "invoices", "stock", "backups"];
@@ -679,8 +680,10 @@ async function checkForUpdate(showToast = false) {
     const apk = (release.assets || []).find((asset) => /\.apk$/i.test(asset.name));
     if (apk) {
       localStorage.setItem("spark_erp_update_url", apk.browser_download_url);
+      localStorage.setItem("spark_erp_update_page", release.html_url || RELEASE_PAGE);
       localStorage.setItem("spark_erp_update_version", latestVersion);
       $("#downloadLatestBtn").dataset.url = apk.browser_download_url;
+      $("#downloadLatestBtn").dataset.page = release.html_url || RELEASE_PAGE;
       $("#downloadLatestBtn").hidden = false;
     }
     if (latestVersion && compareVersions(latestVersion, APP_VERSION) > 0 && apk) {
@@ -701,6 +704,7 @@ async function checkForUpdate(showToast = false) {
 function showUpdatePopup(version, url) {
   $("#updatePopupText").textContent = `Spark ERP v${version} APK ready hai.`;
   $("#downloadUpdateBtn").dataset.url = url;
+  $("#downloadUpdateBtn").dataset.page = localStorage.getItem("spark_erp_update_page") || RELEASE_PAGE;
   $("#updatePopup").hidden = false;
 }
 
@@ -709,16 +713,13 @@ function hideUpdatePopup() {
 }
 
 function downloadUpdate() {
-  const url = $("#downloadUpdateBtn").dataset.url || localStorage.getItem("spark_erp_update_url");
-  if (!url) {
-    toast("Pehle Check Update dabaiye");
+  const page = $("#downloadUpdateBtn").dataset.page || $("#downloadLatestBtn").dataset.page || localStorage.getItem("spark_erp_update_page") || RELEASE_PAGE;
+  if (window.SparkAndroid?.openUrl) {
+    window.SparkAndroid.openUrl(page);
+    toast("APK download page khul raha hai");
     return;
   }
-  if (window.SparkAndroid?.downloadApk) {
-    window.SparkAndroid.downloadApk(url);
-    toast("APK download start ho raha hai");
-    return;
-  }
+  const url = $("#downloadUpdateBtn").dataset.url || $("#downloadLatestBtn").dataset.url || localStorage.getItem("spark_erp_update_url") || page;
   const link = document.createElement("a");
   link.href = url;
   link.target = "_self";
@@ -727,7 +728,7 @@ function downloadUpdate() {
   link.click();
   link.remove();
   setTimeout(() => {
-    window.location.href = url;
+    window.location.href = page;
   }, 300);
 }
 
