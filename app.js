@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 const RELEASE_API = "https://api.github.com/repos/MrRoBoTRaJa/spark-erp/releases/latest";
 const DB_NAME = "spark_erp_phase1";
 const DB_VERSION = 3;
@@ -109,6 +109,7 @@ function bindUi() {
   $$("[data-jump]").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.jump)));
   $("#companyForm").addEventListener("submit", saveCompany);
   $("#newCompanyBtn").addEventListener("click", () => $("#companyForm").reset());
+  $("#companyList").addEventListener("click", handleCompanyListClick);
   $("#userForm").addEventListener("submit", saveUser);
   $("#newUserBtn").addEventListener("click", resetUserForm);
   $("#userList").addEventListener("click", handleUserListClick);
@@ -376,11 +377,24 @@ function renderCompanyList() {
   const companies = isSuperAdmin(currentUser) ? state.companies : state.companies.filter((row) => row.id === currentUser?.companyId);
   $("#companyList").innerHTML = table(["Company", "Code", "GSTIN", "FY", "Action"], companies.map((row) => [
     row.name, companyCode(row), row.gstin || "", `${dateShort(row.fyFrom)} to ${dateShort(row.fyTo)}`,
-    `<button type="button" onclick="selectCompany('${row.id}')">Open</button>`
+    `<button type="button" data-open-company="${escapeAttr(row.id)}">Open</button>`
   ]));
 }
 
-window.selectCompany = (id) => setActiveCompany(id);
+function handleCompanyListClick(event) {
+  const button = event.target.closest("[data-open-company]");
+  if (!button) return;
+  openCompany(button.dataset.openCompany);
+}
+
+function openCompany(id) {
+  const company = state.companies.find((row) => row.id === id);
+  if (!company) return toast("Company record nahi mila");
+  setActiveCompany(id, false);
+  renderAll();
+  showTab("dashboard");
+  toast(`${company.name} open ho gaya`);
+}
 
 function renderCompanyOptions() {
   const select = $("#userForm").elements.companyId;
