@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.graphics.Color;
 import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
 import android.webkit.WebResourceRequest;
@@ -26,7 +27,7 @@ import java.util.Map;
 
 public class MainActivity extends Activity {
     private static final String APP_HOST = "spark-erp.local";
-    private static final String START_URL = "https://" + APP_HOST + "/index.html?v=25";
+    private static final String START_URL = "https://" + APP_HOST + "/index.html?v=27";
     private static final String APK_MIME = "application/vnd.android.package-archive";
     private WebView webView;
     private long updateDownloadId = -1L;
@@ -42,6 +43,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
         downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         webView = new WebView(this);
         setContentView(webView);
@@ -50,6 +53,8 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setUseWideViewPort(false);
+        settings.setLoadWithOverviewMode(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
