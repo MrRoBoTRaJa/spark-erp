@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "1.0.10";
+const APP_VERSION = "1.0.11";
 const RELEASE_API = "https://api.github.com/repos/MrRoBoTRaJa/spark-erp/releases/latest";
 const RELEASE_PAGE = "https://github.com/MrRoBoTRaJa/spark-erp/releases/latest";
 const DB_NAME = "spark_erp_phase1";
@@ -21,12 +21,18 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   db = await openDb();
   await ensureDefaultUser();
+  await handleOwnerReset();
   await loadAll();
   await ensureCompanyCodes();
   await loadAll();
   bindUi();
   setToday();
   setLoginMode("buyer");
+  if (localStorage.getItem("spark_erp_admin_reset_done") === "1") {
+    localStorage.removeItem("spark_erp_admin_reset_done");
+    setLoginMode("super");
+    $("#loginMessage").textContent = "Super Admin reset ho gaya. Ab login karein.";
+  }
   renderAll();
   applyAuth();
   await requestPersistentStorage();
@@ -78,6 +84,17 @@ async function ensureDefaultUser() {
   if (admin && admin.role !== "Super Admin") {
     await put("users", { ...admin, id: "admin", userId: "admin", role: "Super Admin", companyId: "" });
   }
+}
+
+async function handleOwnerReset() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("resetAdmin") !== "spark2026") return;
+  await put("users", DEFAULT_USER);
+  sessionStorage.removeItem("spark_erp_user");
+  localStorage.setItem("spark_erp_admin_reset_done", "1");
+  params.delete("resetAdmin");
+  const nextQuery = params.toString();
+  history.replaceState(null, "", `${location.pathname}${nextQuery ? `?${nextQuery}` : ""}${location.hash}`);
 }
 
 async function loadAll() {
@@ -152,10 +169,12 @@ function setToday() {
 function login(event) {
   event.preventDefault();
   const data = readForm(event.currentTarget);
+  data.userId = String(data.userId || "").trim();
+  data.password = String(data.password || "").trim();
   const code = String(data.companyCode || "").trim().toUpperCase();
   const company = state.companies.find((item) => companyCode(item) === code);
   const user = state.users.find((item) => {
-    const credentialsMatch = item.userId === data.userId && item.password === data.password;
+    const credentialsMatch = String(item.userId || "").trim().toLowerCase() === data.userId.toLowerCase() && String(item.password || "").trim() === data.password;
     if (!credentialsMatch) return false;
     if (item.role === "Super Admin" && data.loginMode === "super") return true;
     return data.loginMode === "buyer" && company && item.companyId === company.id;
